@@ -1,5 +1,5 @@
 import React from "react";
-import mainImg from "./assets/4.png";
+import mainImg from "./assets/4.webp";
 
 function Fourth() {
   return (

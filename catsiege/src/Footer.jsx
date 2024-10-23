@@ -27,10 +27,12 @@ export default function Footer() {
             <h2 className="text-2xl font-bold">CATSIEGE</h2>
             <p className="text-sm mb-2">LET THE SIEGE BEGIN</p>
             <div className="flex justify-center space-x-4 mt-6">
-              <a href="#" className="hover:text-gray-300">
-                <img src={ig} />
-              </a>
-              <a href="#" className="hover:text-gray-300">
+              <a
+                href="https://x.com/catsiege"
+                target="_blank"
+                rel="noopener"
+                className="hover:text-gray-300"
+              >
                 <img src={twitter} />
               </a>
             </div>

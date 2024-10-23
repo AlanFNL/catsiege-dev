@@ -9,13 +9,20 @@ import Footer from "./Footer";
 
 function App() {
   return (
-    <body>
+    <div className="overflow-x-hidden">
       <Hero />
-      <Second />
-      <Whitelist />
+      <div id="tournament">
+        <Second />
+      </div>
+      <div id="whitelist">
+        <Whitelist />
+      </div>
+
       <Fourth />
-      <Footer />
-    </body>
+      <div id="contact">
+        <Footer />
+      </div>
+    </div>
   );
 }
 

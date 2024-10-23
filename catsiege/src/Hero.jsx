@@ -1,11 +1,24 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Menu, X } from "lucide-react";
-import { motion, stagger } from "framer-motion";
-import mainImg from "./assets/hero.png";
+import {
+  motion,
+  stagger,
+  useAnimationControls,
+  useScroll,
+  useTransform,
+} from "framer-motion";
+import mainImg from "./assets/landing.webp";
 import circleArrow from "./assets/circlearrow.png";
 import logo from "./assets/logo.png";
+import { Link } from "react-scroll";
 
-const navItems = ["WISH LIST", "TORNEOS", "ROADMAP", "WHITE PAPER", "CONTACTO"];
+const navItems = [
+  { name: "TOURNAMENT", target: "tournament" },
+  { name: "WHITELIST", target: "whitelist" },
+  { name: "ROADMAP", target: "roadmap" },
+  { name: "WHITEPAPER", target: "whitepaper" },
+  { name: "CONTACT", target: "contact" },
+];
 
 const navItemVariants = {
   hidden: { opacity: 0, y: -20 },
@@ -30,8 +43,43 @@ const textLineVariants = {
   }),
 };
 
+const TypewriterText = ({ text }) => {
+  const controls = useAnimationControls();
+
+  React.useEffect(() => {
+    controls.start((i) => ({
+      opacity: 1,
+      transition: { delay: i * 0.1 },
+    }));
+  }, [controls]);
+
+  return (
+    <motion.h2 className="text-4xl lg:text-5xl font-bold mb-4">
+      {text.split("").map((char, index) => (
+        <motion.span
+          key={index}
+          custom={index}
+          animate={controls}
+          initial={{ opacity: 0 }}
+        >
+          {char}
+        </motion.span>
+      ))}
+    </motion.h2>
+  );
+};
+
 export default function Hero() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const arrowRef = useRef(null);
+  const { scrollYProgress } = useScroll({
+    target: arrowRef,
+    offset: ["start end", "end start"],
+  });
+
+  const rotate = useTransform(scrollYProgress, [0, 1], [10, 90]);
+  const opacity = useTransform(scrollYProgress, [0, 0.2], [0, 1]);
+  const scale = useTransform(scrollYProgress, [0, 0.2], [0, 1]);
 
   return (
     <motion.div
@@ -63,18 +111,23 @@ export default function Hero() {
             <img src={logo} alt="Logo" className="h-8 w-auto" />
             <div className="hidden md:flex space-x-4 lg:space-x-8">
               {navItems.map((item, index) => (
-                <motion.a
-                  key={item}
-                  href="#"
-                  className="text-sm lg:text-base hover:text-gray-300"
+                <motion.div
+                  key={item.name}
                   variants={navItemVariants}
                   initial="hidden"
                   whileInView="visible"
                   custom={index}
                   viewport={{ once: false }}
                 >
-                  {item}
-                </motion.a>
+                  <Link
+                    to={item.target}
+                    smooth={true}
+                    duration={500}
+                    className="text-sm lg:text-base hover:text-gray-300 cursor-pointer"
+                  >
+                    {item.name}
+                  </Link>
+                </motion.div>
               ))}
             </div>
             <button
@@ -88,13 +141,16 @@ export default function Hero() {
           {isMenuOpen && (
             <div className="mt-4 flex flex-col space-y-2 md:hidden">
               {navItems.map((item) => (
-                <a
-                  key={item}
-                  href="#"
-                  className="block py-2 text-sm hover:text-gray-300"
+                <Link
+                  key={item.name}
+                  to={item.target}
+                  smooth={true}
+                  duration={500}
+                  className="block py-2 text-sm hover:text-gray-300 cursor-pointer"
+                  onClick={() => setIsMenuOpen(false)}
                 >
-                  {item}
-                </a>
+                  {item.name}
+                </Link>
               ))}
             </div>
           )}
@@ -111,17 +167,15 @@ export default function Hero() {
               transition={{ duration: 0.5, delay: 0.2 }}
               viewport={{ once: false }}
             >
-              <h2 className="text-4xl lg:text-5xl font-bold mb-4">
-                LET THE
-                <br />
-                SIEGE BEGIN
-              </h2>
+              <TypewriterText text="LET THE SIEGE BEGIN" />
               <motion.div
+                ref={arrowRef}
                 className="relative w-32 h-32 lg:w-48 lg:h-48"
-                initial={{ rotate: 0 }}
-                whileInView={{ rotate: 360 }}
-                transition={{ duration: 1, ease: "easeInOut" }}
-                viewport={{ once: false }}
+                style={{
+                  rotate,
+                  opacity,
+                  scale,
+                }}
               >
                 <img
                   src={circleArrow}
