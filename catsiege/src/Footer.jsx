@@ -1,5 +1,4 @@
 import React from "react";
-import ig from "./assets/ig.svg";
 import twitter from "./assets/twitter.svg";
 import circleArrow from "./assets/circlearrow.png";
 

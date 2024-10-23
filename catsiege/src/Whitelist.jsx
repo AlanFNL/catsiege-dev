@@ -6,12 +6,11 @@ import {
   useAnimationControls,
   useInView,
 } from "framer-motion";
-import { ArrowRight } from "lucide-react";
+
 import circleArrow from "./assets/circlearrow.png";
 import Third from "./assets/3.webp";
 import White from "./assets/whitelist.webp";
 import White2 from "./assets/white.webp";
-import axios from "axios"; // Make sure to install axios: npm install axios
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
