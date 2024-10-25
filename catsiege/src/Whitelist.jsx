@@ -92,6 +92,7 @@ function Whitelist() {
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const storedEmails =
@@ -105,6 +106,7 @@ function Whitelist() {
     e.preventDefault();
     setError("");
     if (email) {
+      setIsLoading(true);
       try {
         const binId = "67187316ad19ca34f8bd09bf"; // Replace with your actual Bin ID
         const url = `https://api.jsonbin.io/v3/b/${binId}`;
@@ -149,6 +151,8 @@ function Whitelist() {
       } catch (err) {
         console.error("Error submitting email:", err);
         setError("An error occurred. Please try again later.");
+      } finally {
+        setIsLoading(false);
       }
     }
   };
@@ -241,10 +245,11 @@ function Whitelist() {
                   />
                   <button
                     type="submit"
-                    className="bg-gray-800 px-4 py-2 rounded-r-md hover:bg-gray-700 transition-colors"
+                    className="bg-gray-800 px-4 py-2 rounded-r-md hover:bg-gray-700 transition-colors relative"
                     style={{ color: "rgba(255, 245, 228, 1)" }}
+                    disabled={isLoading}
                   >
-                    SEND
+                    {isLoading ? <div className="spinner"></div> : "SEND"}
                   </button>
                 </div>
                 {error && <p className="text-red-500 text-sm">{error}</p>}
