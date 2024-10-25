@@ -1,5 +1,6 @@
 import React from "react";
 import twitter from "./assets/twitter.svg";
+import ig from "./assets/ig.svg";
 import circleArrow from "./assets/circlearrow.png";
 
 export default function Footer() {
@@ -26,6 +27,14 @@ export default function Footer() {
             <h2 className="text-2xl font-bold">CATSIEGE</h2>
             <p className="text-sm mb-2">LET THE SIEGE BEGIN</p>
             <div className="flex justify-center space-x-4 mt-6">
+              <a
+                href="https://instagram.com/catsiege"
+                target="_blank"
+                rel="noopener"
+                className="hover:text-gray-300"
+              >
+                <img src={ig} />
+              </a>
               <a
                 href="https://x.com/catsiege"
                 target="_blank"
