@@ -180,7 +180,7 @@ function Whitelist() {
         >
           <motion.div
             ref={arrowRef}
-            className="relative w-32 h-32 lg:w-48 lg:h-48"
+            className="relative w-32 h-32 lg:w-48 lg:h-48 z-10"
             style={{
               rotate,
             }}
@@ -274,7 +274,7 @@ function Whitelist() {
               >
                 <TypewriterText text="Coming soon" />
               </motion.h4>
-              {["NFT", "Tournament"].map((item, index) => (
+              {["DIGITAL COLLECTIBLES", "Tournament"].map((item, index) => (
                 <motion.div
                   key={item}
                   className={`py-4 ${
