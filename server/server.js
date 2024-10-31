@@ -66,15 +66,30 @@ io.on('connection', async (socket) => {
   console.log('Client connected');
 
   try {
-    // Check for ongoing tournament
+    // First check for ongoing tournament
     const ongoingTournament = await Tournament.findOne({ isRunning: true });
     if (ongoingTournament) {
       console.log('Found ongoing tournament:', ongoingTournament._id);
       tournamentState = ongoingTournament.toObject();
       socket.emit('tournamentState', tournamentState);
+    } else {
+      // If no ongoing tournament, check for most recent completed tournament
+      const lastCompletedTournament = await Tournament.findOne(
+        { completedAt: { $exists: true } },
+        {},
+        { sort: { completedAt: -1 } }
+      );
+
+      if (lastCompletedTournament) {
+        console.log('Found completed tournament:', lastCompletedTournament._id);
+        socket.emit('tournamentState', {
+          ...lastCompletedTournament.toObject(),
+          isRunning: false
+        });
+      }
     }
   } catch (error) {
-    console.error('Error checking ongoing tournament:', error);
+    console.error('Error checking tournament status:', error);
   }
 
   socket.on('initializeTournament', async (data) => {
