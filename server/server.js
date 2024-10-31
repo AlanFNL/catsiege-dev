@@ -207,85 +207,44 @@ function simulateBattle(nft1, nft2) {
 // Function to fetch NFTs from Magic Eden
 async function fetchNFTsFromMagicEden() {
   try {
-    const batchSize = 100;
+    const batchSize = 100; // Magic Eden's limit per request
     const requiredNFTs = 512;
+    const batches = Math.ceil(requiredNFTs / batchSize);
     let allNFTs = [];
 
-    console.log('Fetching Mad Lads collection tokens...');
+    console.log(`Fetching ${batches} batches of NFTs...`);
 
-    // First, get all tokens from the collection
-    const requests = [];
-    let offset = 0;
-    
-    // Keep making requests until we have enough NFTs
-    while (allNFTs.length < requiredNFTs) {
-      const request = axios.get('https://api-mainnet.magiceden.dev/v2/tokens', {
+    // Make multiple requests in parallel
+    const requests = Array.from({ length: batches }, (_, i) => 
+      axios.get('https://api-mainnet.magiceden.dev/v2/collections/froganas/listings', {
         params: {
-          offset,
           limit: batchSize,
-          collection: 'mad_lads'  // Collection symbol
+          offset: i * batchSize
         },
         headers: {
           'Accept': 'application/json'
         }
-      });
+      })
+    );
 
-      requests.push(request);
-      offset += batchSize;
-
-      // Add a small delay between requests to avoid rate limiting
-      await delay(100);
-
-      // Process responses in batches to avoid memory issues
-      if (requests.length >= 5 || offset >= 1000) {
-        const responses = await Promise.all(requests);
-        
-        responses.forEach(response => {
-          const validNFTs = response.data
-            .filter(token => token && token.image) // Filter valid tokens
-            .map((token, index) => ({
-              id: allNFTs.length + index,
-              name: token.name,
-              image: token.image,
-              mint: token.mintAddress,
-              health: 2,
-              wins: 0,
-              losses: 0
-            }));
-          
-          allNFTs = [...allNFTs, ...validNFTs];
-        });
-
-        console.log(`Progress: ${allNFTs.length} NFTs fetched...`);
-        requests.length = 0; // Clear the requests array
-      }
-
-      // Break if we've made too many requests without finding enough NFTs
-      if (offset > 2000) {
-        console.log('Reached maximum offset, stopping fetch...');
-        break;
-      }
-    }
-
-    // Process any remaining requests
-    if (requests.length > 0) {
-      const responses = await Promise.all(requests);
-      responses.forEach(response => {
-        const validNFTs = response.data
-          .filter(token => token && token.image)
-          .map((token, index) => ({
-            id: allNFTs.length + index,
-            name: token.name,
-            image: token.image,
-            mint: token.mintAddress,
-            health: 2,
-            wins: 0,
-            losses: 0
-          }));
-        
-        allNFTs = [...allNFTs, ...validNFTs];
-      });
-    }
+    const responses = await Promise.all(requests);
+    
+    // Combine all NFTs from responses
+    responses.forEach(response => {
+      const validNFTs = response.data
+        .filter(listing => listing.token && listing.token.image)
+        .map((listing, index) => ({
+          id: allNFTs.length + index, // Ensure unique IDs
+          name: listing.token.name,
+          image: listing.token.image,
+          mint: listing.token.mint,
+          health: 2,
+          wins: 0,
+          losses: 0
+        }));
+      
+      allNFTs = [...allNFTs, ...validNFTs];
+    });
 
     console.log(`Fetched ${allNFTs.length} total NFTs before shuffling`);
 
@@ -305,11 +264,6 @@ async function fetchNFTsFromMagicEden() {
     console.error('Error fetching NFTs:', error);
     throw new Error(`Failed to fetch NFTs: ${error.message}`);
   }
-}
-
-// Helper function to delay between requests
-function delay(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 // Add rate limiting to avoid API issues
