@@ -82,8 +82,10 @@ async function runTournament() {
         };
         io.emit('tournamentState', tournamentState);
 
-        // Simulate battle with delay
+        // Wait 2 seconds before battle
         await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Simulate battle and get winner
         const winner = await simulateBattle(currentBracket[i], currentBracket[i + 1]);
         winners.push({ ...winner, health: 2 });
       } else {
@@ -99,7 +101,7 @@ async function runTournament() {
     };
 
     io.emit('tournamentState', tournamentState);
-    await new Promise(resolve => setTimeout(resolve, 3000)); // Delay between rounds
+    await new Promise(resolve => setTimeout(resolve, 3000));
   }
 }
 
