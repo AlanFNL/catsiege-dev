@@ -207,36 +207,80 @@ function simulateBattle(nft1, nft2) {
 // Function to fetch NFTs from Magic Eden
 async function fetchNFTsFromMagicEden() {
   try {
-    // Magic Eden API endpoint for Mad Lads collection
-    const response = await axios.get('https://api-mainnet.magiceden.dev/v2/collections/mad_lads/listings', {
-      params: {
-        limit: 1000, // Fetch more than we need to ensure we get enough valid listings
-        offset: 0
-      },
-      headers: {
-        'Accept': 'application/json'
-      }
+    const batchSize = 100; // Magic Eden's limit per request
+    const requiredNFTs = 512;
+    const batches = Math.ceil(requiredNFTs / batchSize);
+    let allNFTs = [];
+
+    console.log(`Fetching ${batches} batches of NFTs...`);
+
+    // Make multiple requests in parallel
+    const requests = Array.from({ length: batches }, (_, i) => 
+      axios.get('https://api-mainnet.magiceden.dev/v2/collections/mad_lads/listings', {
+        params: {
+          limit: batchSize,
+          offset: i * batchSize
+        },
+        headers: {
+          'Accept': 'application/json'
+        }
+      })
+    );
+
+    const responses = await Promise.all(requests);
+    
+    // Combine all NFTs from responses
+    responses.forEach(response => {
+      const validNFTs = response.data
+        .filter(listing => listing.token && listing.token.image)
+        .map((listing, index) => ({
+          id: allNFTs.length + index, // Ensure unique IDs
+          name: listing.token.name,
+          image: listing.token.image,
+          mint: listing.token.mint,
+          health: 2,
+          wins: 0,
+          losses: 0
+        }));
+      
+      allNFTs = [...allNFTs, ...validNFTs];
     });
 
-    // Shuffle and select 512 NFTs
-    const shuffledNFTs = response.data
-      .filter(listing => listing.token && listing.token.image) // Ensure we have valid image URLs
-      .sort(() => Math.random() - 0.5) // Shuffle the array
-      .slice(0, 512) // Take only 512 NFTs
-      .map((listing, index) => ({
-        id: index,
-        name: listing.token.name,
-        image: listing.token.image,
-        mint: listing.token.mint,
-        health: 2,
-        wins: 0,
-        losses: 0
-      }));
+    console.log(`Fetched ${allNFTs.length} total NFTs before shuffling`);
 
+    if (allNFTs.length < requiredNFTs) {
+      throw new Error(`Only found ${allNFTs.length} valid NFTs, need ${requiredNFTs}`);
+    }
+
+    // Shuffle and select required number of NFTs
+    const shuffledNFTs = allNFTs
+      .sort(() => Math.random() - 0.5)
+      .slice(0, requiredNFTs);
+
+    console.log(`Successfully prepared ${shuffledNFTs.length} NFTs for tournament`);
     return shuffledNFTs;
+
   } catch (error) {
     console.error('Error fetching NFTs:', error);
-    throw error;
+    throw new Error(`Failed to fetch NFTs: ${error.message}`);
+  }
+}
+
+// Add rate limiting to avoid API issues
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// Optional: Add retry logic for failed requests
+async function fetchWithRetry(url, config, retries = 3) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const response = await axios.get(url, config);
+      return response;
+    } catch (error) {
+      if (i === retries - 1) throw error;
+      await delay(1000 * (i + 1)); // Exponential backoff
+    }
   }
 }
 
