@@ -132,6 +132,8 @@ async function runTournament() {
     const currentBracket = tournamentState.brackets[tournamentState.currentRound];
     
     if (currentBracket.length <= 1) {
+      console.log('Tournament complete! Winner:', currentBracket[0]);
+      
       tournamentState.isRunning = false;
       tournamentState.winners = currentBracket;
       tournamentState.completedAt = Date.now();
@@ -142,24 +144,26 @@ async function runTournament() {
         completedAt: Date.now()
       });
 
-      io.emit('tournamentState', tournamentState);
+      io.emit('tournamentState', {
+        ...tournamentState,
+        winners: currentBracket,
+        isRunning: false
+      });
+      
       break;
     }
 
     const winners = [];
     for (let i = 0; i < currentBracket.length; i += 2) {
       if (i + 1 < currentBracket.length) {
-        // Update current match
         tournamentState.currentMatch = {
           nft1: currentBracket[i],
           nft2: currentBracket[i + 1]
         };
         io.emit('tournamentState', tournamentState);
 
-        // Wait 2 seconds before battle
         await new Promise(resolve => setTimeout(resolve, 2000));
         
-        // Simulate battle and get winner
         const winner = await simulateBattle(currentBracket[i], currentBracket[i + 1]);
         winners.push({ ...winner, health: 2 });
       } else {
@@ -174,7 +178,6 @@ async function runTournament() {
       lastUpdate: Date.now()
     };
 
-    // Update tournament in database
     await Tournament.findByIdAndUpdate(tournamentState._id, {
       currentRound: tournamentState.currentRound,
       brackets: tournamentState.brackets,
