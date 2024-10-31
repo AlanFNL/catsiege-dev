@@ -4,6 +4,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
+const axios = require('axios');
 
 const app = express();
 const server = http.createServer(app);
@@ -118,6 +119,42 @@ function simulateBattle(nft1, nft2) {
       io.emit('battleUpdate', { nft1, nft2 });
     }, 1000);
   });
+}
+
+// Function to fetch NFTs from Magic Eden
+async function fetchNFTsFromMagicEden() {
+  try {
+    // Magic Eden API endpoint for Mad Lads collection
+    const response = await axios.get('https://api-mainnet.magiceden.dev/v2/collections/mad_lads/listings', {
+      params: {
+        limit: 1000, // Fetch more than we need to ensure we get enough valid listings
+        offset: 0
+      },
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
+
+    // Shuffle and select 512 NFTs
+    const shuffledNFTs = response.data
+      .filter(listing => listing.token && listing.token.image) // Ensure we have valid image URLs
+      .sort(() => Math.random() - 0.5) // Shuffle the array
+      .slice(0, 512) // Take only 512 NFTs
+      .map((listing, index) => ({
+        id: index,
+        name: listing.token.name,
+        image: listing.token.image,
+        mint: listing.token.mint,
+        health: 2,
+        wins: 0,
+        losses: 0
+      }));
+
+    return shuffledNFTs;
+  } catch (error) {
+    console.error('Error fetching NFTs:', error);
+    throw error;
+  }
 }
 
 const PORT = process.env.PORT || 3001;
