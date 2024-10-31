@@ -1,5 +1,5 @@
 require('dotenv').config();
-
+const mongoose = require('mongoose');
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -18,7 +18,27 @@ const io = new Server(server, {
 app.use(cors());
 app.use(express.json());
 
-// Store tournament state
+// MongoDB Connection
+mongoose.connect(process.env.MONGODB_URI)
+  .then(() => console.log('Connected to MongoDB'))
+  .catch(err => console.error('MongoDB connection error:', err));
+
+// Tournament Schema
+const tournamentSchema = new mongoose.Schema({
+  currentRound: Number,
+  brackets: Array,
+  currentMatch: Object,
+  winners: Array,
+  isRunning: Boolean,
+  roundSizes: Array,
+  lastUpdate: Date,
+  startedAt: Date,
+  completedAt: Date
+});
+
+const Tournament = mongoose.model('Tournament', tournamentSchema);
+
+// Modified tournament state initialization
 let tournamentState = {
   currentRound: 0,
   brackets: [],
@@ -29,24 +49,34 @@ let tournamentState = {
   lastUpdate: Date.now()
 };
 
-// Socket.IO connection handling
-io.on('connection', (socket) => {
+// Modified Socket.IO connection handling
+io.on('connection', async (socket) => {
   console.log('Client connected');
 
-  // Send current tournament state to new connections
+  // Check for ongoing tournament
+  const ongoingTournament = await Tournament.findOne({ isRunning: true });
+  if (ongoingTournament) {
+    tournamentState = ongoingTournament.toObject();
+  }
+
   socket.emit('tournamentState', tournamentState);
 
-  // Handle tournament initialization
   socket.on('initializeTournament', async (data) => {
     try {
-      const nfts = await fetchNFTsFromMagicEden(); // Implement this function
-      tournamentState = {
-        ...tournamentState,
+      const nfts = await fetchNFTsFromMagicEden();
+      
+      // Create new tournament in database
+      const newTournament = new Tournament({
         brackets: [nfts.map(nft => ({ ...nft, health: 2, wins: 0, losses: 0 }))],
         currentRound: 0,
         isRunning: true,
-        lastUpdate: Date.now()
-      };
+        roundSizes: [512, 256, 128, 64, 32, 16, 8, 4, 2, 1],
+        lastUpdate: Date.now(),
+        startedAt: Date.now()
+      });
+
+      await newTournament.save();
+      tournamentState = newTournament.toObject();
       
       io.emit('tournamentState', tournamentState);
       runTournament();
@@ -60,7 +90,7 @@ io.on('connection', (socket) => {
   });
 });
 
-// Function to run the tournament
+// Modified runTournament function
 async function runTournament() {
   while (tournamentState.isRunning) {
     const currentBracket = tournamentState.brackets[tournamentState.currentRound];
@@ -68,6 +98,14 @@ async function runTournament() {
     if (currentBracket.length <= 1) {
       tournamentState.isRunning = false;
       tournamentState.winners = currentBracket;
+      tournamentState.completedAt = Date.now();
+      
+      await Tournament.findByIdAndUpdate(tournamentState._id, {
+        isRunning: false,
+        winners: currentBracket,
+        completedAt: Date.now()
+      });
+
       io.emit('tournamentState', tournamentState);
       break;
     }
@@ -99,6 +137,13 @@ async function runTournament() {
       brackets: [...tournamentState.brackets, winners],
       lastUpdate: Date.now()
     };
+
+    // Update tournament in database
+    await Tournament.findByIdAndUpdate(tournamentState._id, {
+      currentRound: tournamentState.currentRound,
+      brackets: tournamentState.brackets,
+      lastUpdate: Date.now()
+    });
 
     io.emit('tournamentState', tournamentState);
     await new Promise(resolve => setTimeout(resolve, 3000));
