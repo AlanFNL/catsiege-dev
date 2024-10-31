@@ -53,18 +53,37 @@ let tournamentState = {
 io.on('connection', async (socket) => {
   console.log('Client connected');
 
-  // Check for ongoing tournament
-  const ongoingTournament = await Tournament.findOne({ isRunning: true });
-  if (ongoingTournament) {
-    tournamentState = ongoingTournament.toObject();
+  try {
+    // Check for ongoing tournament
+    const ongoingTournament = await Tournament.findOne({ isRunning: true });
+    if (ongoingTournament) {
+      console.log('Found ongoing tournament:', ongoingTournament._id);
+      tournamentState = ongoingTournament.toObject();
+      socket.emit('tournamentState', tournamentState);
+    }
+  } catch (error) {
+    console.error('Error checking ongoing tournament:', error);
   }
 
-  socket.emit('tournamentState', tournamentState);
-
   socket.on('initializeTournament', async (data) => {
+    console.log('Initializing new tournament...');
     try {
+      // Check if there's already a running tournament
+      const existingTournament = await Tournament.findOne({ isRunning: true });
+      if (existingTournament) {
+        console.log('Tournament already in progress');
+        socket.emit('error', { message: 'A tournament is already in progress' });
+        return;
+      }
+
+      console.log('Fetching NFTs from Magic Eden...');
       const nfts = await fetchNFTsFromMagicEden();
+      console.log(`Fetched ${nfts.length} NFTs`);
       
+      if (!nfts || nfts.length < 512) {
+        throw new Error('Not enough NFTs fetched');
+      }
+
       // Create new tournament in database
       const newTournament = new Tournament({
         brackets: [nfts.map(nft => ({ ...nft, health: 2, wins: 0, losses: 0 }))],
@@ -75,13 +94,18 @@ io.on('connection', async (socket) => {
         startedAt: Date.now()
       });
 
+      console.log('Saving new tournament...');
       await newTournament.save();
       tournamentState = newTournament.toObject();
       
+      console.log('Tournament created, starting matches...');
       io.emit('tournamentState', tournamentState);
       runTournament();
     } catch (error) {
-      socket.emit('error', { message: 'Failed to initialize tournament' });
+      console.error('Tournament initialization error:', error);
+      socket.emit('error', { 
+        message: 'Failed to initialize tournament: ' + error.message 
+      });
     }
   });
 
