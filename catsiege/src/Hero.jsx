@@ -210,7 +210,7 @@ export default function Hero() {
                 custom={1}
                 viewport={{ once: false }}
               >
-                AI-GENERATED NFT
+                DIGITAL ART COLLECTION ON SOLANA BLOCKCHAIN
               </motion.p>
               <motion.p
                 className="text-lg lg:text-xl mb-4 font-bold"
@@ -220,15 +220,15 @@ export default function Hero() {
                 custom={2}
                 viewport={{ once: false }}
               >
-                COLLECTION ON SOLANA.
+                UNIQUE, SECURE AND DISRUPTIVE
               </motion.p>
               {[
-                "EARN STAKING REWARDS AND",
-                "JOIN THRILLING PVP TOURNAMENTS",
-                "FOR SOL/USDC PRIZES. YOUR",
-                "NFT IS YOUR KEY",
-                "TO VICTORY IN THE",
-                "SIEGE OF SOLANA.",
+                "PARTICIPATE IN EXCLUSIVE TOURNAMENTS AND",
+                "EARN REWARDS",
+                "RAKEBACK MULTIPLIERS",
+                "SPECIAL PVP TOURNAMENTS",
+                "FREEROLLS",
+                "JOIN A GAME-CHANGING ECOSYSTEM",
               ].map((line, index) => (
                 <motion.p
                   key={index}
