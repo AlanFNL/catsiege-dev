@@ -103,17 +103,22 @@ io.on('connection', async (socket) => {
         return;
       }
 
-      console.log('Fetching NFTs from Magic Eden...');
-      const nfts = await fetchNFTsFromMagicEden();
+      console.log('Fetching NFTs using Helius...');
+      const nfts = await fetchNFTsUsingHelius();
       console.log(`Fetched ${nfts.length} NFTs`);
       
       if (!nfts || nfts.length < 512) {
-        throw new Error('Not enough NFTs fetched');
+        throw new Error(`Not enough NFTs fetched (got ${nfts.length}, need 512)`);
       }
+
+      // Shuffle and select 512 NFTs
+      const shuffledNFTs = nfts
+        .sort(() => Math.random() - 0.5)
+        .slice(0, 512);
 
       // Create new tournament in database
       const newTournament = new Tournament({
-        brackets: [nfts.map(nft => ({ ...nft, health: 2, wins: 0, losses: 0 }))],
+        brackets: [shuffledNFTs],
         currentRound: 0,
         isRunning: true,
         roundSizes: [512, 256, 128, 64, 32, 16, 8, 4, 2, 1],
@@ -130,9 +135,7 @@ io.on('connection', async (socket) => {
       runTournament();
     } catch (error) {
       console.error('Tournament initialization error:', error);
-      socket.emit('error', { 
-        message: 'Failed to initialize tournament: ' + error.message 
-      });
+      socket.emit('error', { message: 'Failed to initialize tournament: ' + error.message });
     }
   });
 
@@ -299,6 +302,92 @@ async function fetchWithRetry(url, config, retries = 3) {
       if (i === retries - 1) throw error;
       await delay(1000 * (i + 1)); // Exponential backoff
     }
+  }
+}
+
+async function fetchNFTsUsingHelius() {
+  try {
+    const HELIUS_API_KEY = process.env.HELIUS_API_KEY;
+    if (!HELIUS_API_KEY) {
+      throw new Error('HELIUS_API_KEY not found in environment variables');
+    }
+
+    const endpoint = `https://api.helius.xyz/v0/token-metadata?api-key=${HELIUS_API_KEY}`;
+    const requiredNFTs = 512;
+    
+    console.log('Querying Helius API for collection:', collectionAddress);
+    
+    // First request to get total count
+    const initialResponse = await axios.post(endpoint, {
+      query: {
+        collection: 'C7on9fL8YFp5W6M7a6SvehMKBppauZXu2eYDTZG4BN2i'
+      },
+      options: {
+        limit: 1
+      }
+    });
+
+    const totalNFTs = initialResponse.data.result.length;
+    console.log(`Collection has approximately ${totalNFTs} total NFTs`);
+
+    // Now fetch enough to ensure we get 512 valid ones
+    const response = await axios.post(endpoint, {
+      query: {
+        collection: 'C7on9fL8YFp5W6M7a6SvehMKBppauZXu2eYDTZG4BN2i'
+      },
+      options: {
+        limit: Math.max(1000, requiredNFTs * 1.2) // Fetch extra to account for invalid NFTs
+      }
+    });
+
+    if (!response.data || !response.data.result) {
+      throw new Error('Invalid response from Helius API');
+    }
+
+    console.log(`Raw NFT count from Helius: ${response.data.result.length}`);
+
+    const validNFTs = response.data.result
+      .filter(nft => {
+        const hasUri = nft.onChainMetadata?.metadata?.data?.uri;
+        const hasName = nft.onChainMetadata?.metadata?.data?.name;
+        return hasUri && hasName;
+      })
+      .map((nft, index) => {
+        if (index === 0) {
+          console.log('Sample NFT metadata:', nft);
+        }
+
+        return {
+          id: index,
+          name: nft.onChainMetadata.metadata.data.name,
+          image: nft.onChainMetadata.metadata.data.uri,
+          mint: nft.mint,
+          health: 2,
+          wins: 0,
+          losses: 0
+        };
+      });
+
+    console.log(`Found ${validNFTs.length} valid NFTs before shuffling`);
+
+    if (validNFTs.length < requiredNFTs) {
+      throw new Error(`Not enough valid NFTs (got ${validNFTs.length}, need ${requiredNFTs})`);
+    }
+
+    // Shuffle and select exactly 512 NFTs
+    const shuffledNFTs = validNFTs
+      .sort(() => Math.random() - 0.5)
+      .slice(0, requiredNFTs);
+
+    console.log(`Successfully prepared ${shuffledNFTs.length} NFTs for tournament`);
+    return shuffledNFTs;
+
+  } catch (error) {
+    console.error('Error fetching NFTs using Helius:', error);
+    if (error.response) {
+      console.error('API Response:', error.response.data);
+    }
+    throw new Error(`Helius API error: ${error.message}`);
   }
 }
 
