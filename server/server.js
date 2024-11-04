@@ -314,13 +314,14 @@ async function fetchNFTsUsingHelius() {
 
     const endpoint = `https://api.helius.xyz/v0/token-metadata?api-key=${HELIUS_API_KEY}`;
     const requiredNFTs = 512;
+    const collectionAddress = 'C7on9fL8YFp5W6M7a6SvehMKBppauZXu2eYDTZG4BN2i';
     
     console.log('Querying Helius API for collection:', collectionAddress);
     
     // First request to get total count
     const initialResponse = await axios.post(endpoint, {
       query: {
-        collection: 'C7on9fL8YFp5W6M7a6SvehMKBppauZXu2eYDTZG4BN2i'
+        collection: collectionAddress
       },
       options: {
         limit: 1
@@ -333,10 +334,10 @@ async function fetchNFTsUsingHelius() {
     // Now fetch enough to ensure we get 512 valid ones
     const response = await axios.post(endpoint, {
       query: {
-        collection: 'C7on9fL8YFp5W6M7a6SvehMKBppauZXu2eYDTZG4BN2i'
+        collection: collectionAddress
       },
       options: {
-        limit: Math.max(1000, requiredNFTs * 1.2) // Fetch extra to account for invalid NFTs
+        limit: Math.max(1000, requiredNFTs * 1.2)
       }
     });
 
