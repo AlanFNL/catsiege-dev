@@ -211,6 +211,8 @@ function simulateBattle(nft1, nft2) {
     const firstAttacker = Math.random() > 0.5 ? nft1 : nft2;
     const secondAttacker = firstAttacker === nft1 ? nft2 : nft1;
     
+    console.log('Coin flip winner:', firstAttacker.name);
+    
     io.emit('coinFlip', {
       winner: firstAttacker,
       loser: secondAttacker
@@ -218,35 +220,46 @@ function simulateBattle(nft1, nft2) {
 
     // Wait for coin flip animation
     setTimeout(() => {
+      let currentAttacker = firstAttacker;
+      let currentDefender = secondAttacker;
+
       const battle = setInterval(() => {
-        const currentAttacker = Math.random() > 0.5 ? nft1 : nft2;
         const damage = Math.random() > 0.3 ? 1 : 0; // 70% chance to hit
         
         if (damage > 0) {
-          const target = currentAttacker === nft1 ? nft2 : nft1;
-          target.health -= damage;
+          currentDefender.health -= damage;
           
           // Emit hit event with attacker and target info
           io.emit('nftHit', {
             attacker: currentAttacker,
-            target: target,
+            target: currentDefender,
             damage: damage
+          });
+
+          // Emit updated state after hit
+          io.emit('battleUpdate', { 
+            nft1: nft1, 
+            nft2: nft2 
           });
         }
 
-        if (nft1.health <= 0 || nft2.health <= 0) {
+        if (currentDefender.health <= 0) {
           clearInterval(battle);
-          const winner = nft1.health <= 0 ? nft2 : nft1;
+          const winner = currentDefender === nft1 ? nft2 : nft1;
           const loser = winner === nft1 ? nft2 : nft1;
           
-          // Emit battle result
           io.emit('battleResult', { winner, loser });
           resolve(winner);
+          return;
         }
 
-        io.emit('battleUpdate', { nft1, nft2 });
-      }, 2000); // Increased interval for better animation timing
-    }, 3000); // Wait for coin flip animation
+        // Swap attacker and defender roles
+        const temp = currentAttacker;
+        currentAttacker = currentDefender;
+        currentDefender = temp;
+
+      }, 3000); // Increased interval for better animation timing
+    }, 4000); // Longer wait for coin flip animation
   });
 }
 
