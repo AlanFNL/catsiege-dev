@@ -207,18 +207,46 @@ async function runTournament() {
 // Battle simulation function
 function simulateBattle(nft1, nft2) {
   return new Promise(resolve => {
-    const battle = setInterval(() => {
-      const damage = Math.random() > 0.5 ? 1 : 0;
-      const target = Math.random() > 0.5 ? nft1 : nft2;
-      target.health -= damage;
+    // Initial coin flip
+    const firstAttacker = Math.random() > 0.5 ? nft1 : nft2;
+    const secondAttacker = firstAttacker === nft1 ? nft2 : nft1;
+    
+    io.emit('coinFlip', {
+      winner: firstAttacker,
+      loser: secondAttacker
+    });
 
-      if (target.health <= 0) {
-        clearInterval(battle);
-        resolve(target === nft1 ? nft2 : nft1);
-      }
+    // Wait for coin flip animation
+    setTimeout(() => {
+      const battle = setInterval(() => {
+        const currentAttacker = Math.random() > 0.5 ? nft1 : nft2;
+        const damage = Math.random() > 0.3 ? 1 : 0; // 70% chance to hit
+        
+        if (damage > 0) {
+          const target = currentAttacker === nft1 ? nft2 : nft1;
+          target.health -= damage;
+          
+          // Emit hit event with attacker and target info
+          io.emit('nftHit', {
+            attacker: currentAttacker,
+            target: target,
+            damage: damage
+          });
+        }
 
-      io.emit('battleUpdate', { nft1, nft2 });
-    }, 1000);
+        if (nft1.health <= 0 || nft2.health <= 0) {
+          clearInterval(battle);
+          const winner = nft1.health <= 0 ? nft2 : nft1;
+          const loser = winner === nft1 ? nft2 : nft1;
+          
+          // Emit battle result
+          io.emit('battleResult', { winner, loser });
+          resolve(winner);
+        }
+
+        io.emit('battleUpdate', { nft1, nft2 });
+      }, 2000); // Increased interval for better animation timing
+    }, 3000); // Wait for coin flip animation
   });
 }
 
