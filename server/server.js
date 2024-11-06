@@ -222,6 +222,7 @@ function simulateBattle(nft1, nft2) {
     setTimeout(() => {
       let currentAttacker = firstAttacker;
       let currentDefender = secondAttacker;
+      let turnCount = 0;
 
       const battle = setInterval(() => {
         const damage = Math.random() > 0.3 ? 1 : 0; // 70% chance to hit
@@ -253,13 +254,17 @@ function simulateBattle(nft1, nft2) {
           return;
         }
 
-        // Swap attacker and defender roles
-        const temp = currentAttacker;
-        currentAttacker = currentDefender;
-        currentDefender = temp;
+        // Only swap roles after both NFTs have had their turn
+        turnCount++;
+        if (turnCount % 2 === 0) {
+          // Swap attacker and defender roles after both have attacked
+          const temp = currentAttacker;
+          currentAttacker = currentDefender;
+          currentDefender = temp;
+        }
 
-      }, 3000); // Increased interval for better animation timing
-    }, 4000); // Longer wait for coin flip animation
+      }, 3000); // Each attack takes 3 seconds
+    }, 4000); // Wait for coin flip animation
   });
 }
 
