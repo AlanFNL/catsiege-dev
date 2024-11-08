@@ -38,7 +38,9 @@ function App() {
       <div id="whitelist">
         <Whitelist />
       </div>
-
+      <div>
+        <Tournament />
+      </div>
       <Fourth />
       <div id="contact">
         <Footer />
