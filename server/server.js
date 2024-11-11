@@ -53,6 +53,31 @@ let tournamentState = {
   lastUpdate: Date.now()
 };
 
+// Add these helper functions after the Tournament model definition
+function calculateTournamentStats(tournamentState) {
+  const currentBracket = tournamentState.brackets[tournamentState.currentRound];
+  const currentRoundSize = tournamentState.roundSizes[tournamentState.currentRound];
+  
+  return {
+    currentRound: tournamentState.currentRound + 1,
+    totalRounds: tournamentState.roundSizes.length,
+    remainingMatches: Math.floor(currentBracket.length / 2),
+    playersLeft: currentBracket.length,
+    roundProgress: Math.round((1 - currentBracket.length / currentRoundSize) * 100),
+    matchesCompleted: Math.floor((currentRoundSize - currentBracket.length) / 2),
+    totalMatchesInRound: Math.floor(currentRoundSize / 2)
+  };
+}
+
+// Modify the tournament state emission to include stats
+function emitTournamentState() {
+  const stats = calculateTournamentStats(tournamentState);
+  io.emit('tournamentState', {
+    ...tournamentState,
+    stats
+  });
+}
+
 // Modified Socket.IO connection handling
 io.on('connection', async (socket) => {
   console.log('Client connected');
@@ -63,7 +88,8 @@ io.on('connection', async (socket) => {
     if (ongoingTournament) {
       console.log('Found ongoing tournament:', ongoingTournament._id);
       tournamentState = ongoingTournament.toObject();
-      socket.emit('tournamentState', tournamentState);
+      const stats = calculateTournamentStats(tournamentState);
+      socket.emit('tournamentState', { ...tournamentState, stats });
     } else {
       // If no ongoing tournament, check for most recent completed tournament
       const lastCompletedTournament = await Tournament.findOne(
@@ -151,12 +177,7 @@ async function runTournament() {
         completedAt: Date.now()
       });
 
-      io.emit('tournamentState', {
-        ...tournamentState,
-        winners: currentBracket,
-        isRunning: false
-      });
-      
+      emitTournamentState();
       break;
     }
 
@@ -167,7 +188,7 @@ async function runTournament() {
           nft1: currentBracket[i],
           nft2: currentBracket[i + 1]
         };
-        io.emit('tournamentState', tournamentState);
+        emitTournamentState();
 
         await new Promise(resolve => setTimeout(resolve, 2000));
         
@@ -191,7 +212,7 @@ async function runTournament() {
       lastUpdate: Date.now()
     });
 
-    io.emit('tournamentState', tournamentState);
+    emitTournamentState();
     await new Promise(resolve => setTimeout(resolve, 3000));
   }
 }
