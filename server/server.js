@@ -83,19 +83,21 @@ function getUpcomingMatches(tournamentState) {
   return upcomingMatches;
 }
 
-// Modify the calculateTournamentStats function to include upcoming matches
+// Modify the calculateTournamentStats function to fix the calculations
 function calculateTournamentStats(tournamentState) {
   const currentBracket = tournamentState.brackets[tournamentState.currentRound];
   const currentRoundSize = tournamentState.roundSizes[tournamentState.currentRound];
+  const initialMatchesInRound = Math.floor(currentRoundSize / 2);
+  const completedMatches = Math.floor((currentRoundSize - currentBracket.length) / 2);
   
   return {
     currentRound: tournamentState.currentRound + 1,
     totalRounds: tournamentState.roundSizes.length,
-    remainingMatches: Math.floor(currentBracket.length / 2),
+    remainingMatches: initialMatchesInRound - completedMatches,
     playersLeft: currentBracket.length,
-    roundProgress: Math.round((1 - currentBracket.length / currentRoundSize) * 100),
-    matchesCompleted: Math.floor((currentRoundSize - currentBracket.length) / 2),
-    totalMatchesInRound: Math.floor(currentRoundSize / 2),
+    roundProgress: Math.round((completedMatches / initialMatchesInRound) * 100),
+    matchesCompleted: completedMatches,
+    totalMatchesInRound: initialMatchesInRound,
     upcomingMatches: getUpcomingMatches(tournamentState)
   };
 }
@@ -190,66 +192,7 @@ io.on('connection', async (socket) => {
   });
 });
 
-// Modified runTournament function
-async function runTournament() {
-  while (tournamentState.isRunning) {
-    const currentBracket = tournamentState.brackets[tournamentState.currentRound];
-    
-    if (currentBracket.length <= 1) {
-      console.log('Tournament complete! Winner:', currentBracket[0]);
-      
-      tournamentState.isRunning = false;
-      tournamentState.winners = currentBracket;
-      tournamentState.completedAt = Date.now();
-      
-      await Tournament.findByIdAndUpdate(tournamentState._id, {
-        isRunning: false,
-        winners: currentBracket,
-        completedAt: Date.now()
-      });
-
-      emitTournamentState();
-      break;
-    }
-
-    const winners = [];
-    for (let i = 0; i < currentBracket.length; i += 2) {
-      if (i + 1 < currentBracket.length) {
-        tournamentState.currentMatch = {
-          nft1: currentBracket[i],
-          nft2: currentBracket[i + 1]
-        };
-        // Emit updated state with new upcoming matches
-        emitTournamentState();
-
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        const winner = await simulateBattle(currentBracket[i], currentBracket[i + 1]);
-        winners.push({ ...winner, health: 2 });
-      } else {
-        winners.push({ ...currentBracket[i], health: 2 });
-      }
-    }
-
-    tournamentState = {
-      ...tournamentState,
-      currentRound: tournamentState.currentRound + 1,
-      brackets: [...tournamentState.brackets, winners],
-      lastUpdate: Date.now()
-    };
-
-    await Tournament.findByIdAndUpdate(tournamentState._id, {
-      currentRound: tournamentState.currentRound,
-      brackets: tournamentState.brackets,
-      lastUpdate: Date.now()
-    });
-
-    emitTournamentState();
-    await new Promise(resolve => setTimeout(resolve, 3000));
-  }
-}
-
-// Battle simulation function
+// Update the simulateBattle function to emit state after each match
 function simulateBattle(nft1, nft2) {
   return new Promise(resolve => {
     // Initial coin flip
@@ -310,8 +253,9 @@ function simulateBattle(nft1, nft2) {
             
             io.emit('battleResult', { winner, loser });
             
-            // Emit updated tournament state with new upcoming matches
-            emitTournamentState();
+            // Update tournament state and emit immediately after battle ends
+            const stats = calculateTournamentStats(tournamentState);
+            io.emit('tournamentState', { ...tournamentState, stats });
             
             resolve(winner);
             return;
@@ -330,6 +274,70 @@ function simulateBattle(nft1, nft2) {
       }, 4000); // Each attack cycle takes 4 seconds total
     }, 4000); // Wait for coin flip animation
   });
+}
+
+// Update the runTournament function to emit state after each match pair
+async function runTournament() {
+  while (tournamentState.isRunning) {
+    const currentBracket = tournamentState.brackets[tournamentState.currentRound];
+    
+    if (currentBracket.length <= 1) {
+      console.log('Tournament complete! Winner:', currentBracket[0]);
+      
+      tournamentState.isRunning = false;
+      tournamentState.winners = currentBracket;
+      tournamentState.completedAt = Date.now();
+      
+      await Tournament.findByIdAndUpdate(tournamentState._id, {
+        isRunning: false,
+        winners: currentBracket,
+        completedAt: Date.now()
+      });
+
+      emitTournamentState();
+      break;
+    }
+
+    const winners = [];
+    for (let i = 0; i < currentBracket.length; i += 2) {
+      if (i + 1 < currentBracket.length) {
+        tournamentState.currentMatch = {
+          nft1: currentBracket[i],
+          nft2: currentBracket[i + 1]
+        };
+        
+        // Emit updated state before battle starts
+        emitTournamentState();
+
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        const winner = await simulateBattle(currentBracket[i], currentBracket[i + 1]);
+        winners.push({ ...winner, health: 2 });
+        
+        // Emit updated state after each match
+        emitTournamentState();
+      } else {
+        winners.push({ ...currentBracket[i], health: 2 });
+      }
+    }
+
+    tournamentState = {
+      ...tournamentState,
+      currentRound: tournamentState.currentRound + 1,
+      brackets: [...tournamentState.brackets, winners],
+      lastUpdate: Date.now()
+    };
+
+    // Save to database and emit state
+    await Tournament.findByIdAndUpdate(tournamentState._id, {
+      currentRound: tournamentState.currentRound,
+      brackets: tournamentState.brackets,
+      lastUpdate: Date.now()
+    });
+
+    emitTournamentState();
+    await new Promise(resolve => setTimeout(resolve, 3000));
+  }
 }
 
 // Function to fetch NFTs from Magic Eden
