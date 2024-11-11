@@ -53,7 +53,37 @@ let tournamentState = {
   lastUpdate: Date.now()
 };
 
-// Add these helper functions after the Tournament model definition
+// Add this function to calculate upcoming matches
+function getUpcomingMatches(tournamentState) {
+  const currentBracket = tournamentState.brackets[tournamentState.currentRound];
+  const currentMatchIndex = currentBracket.findIndex(
+    nft => nft.id === tournamentState.currentMatch?.nft1.id
+  );
+  
+  // If we can't find current match or it's invalid, return empty array
+  if (currentMatchIndex === -1 || currentMatchIndex % 2 !== 0) {
+    return [];
+  }
+
+  const upcomingMatches = [];
+  // Look for next 3 matches
+  for (let i = currentMatchIndex + 2; i < currentBracket.length - 1; i += 2) {
+    // Make sure we have both NFTs for the match
+    if (i + 1 < currentBracket.length) {
+      upcomingMatches.push({
+        nft1: currentBracket[i],
+        nft2: currentBracket[i + 1]
+      });
+    }
+    
+    // Only get up to 3 upcoming matches
+    if (upcomingMatches.length >= 3) break;
+  }
+
+  return upcomingMatches;
+}
+
+// Modify the calculateTournamentStats function to include upcoming matches
 function calculateTournamentStats(tournamentState) {
   const currentBracket = tournamentState.brackets[tournamentState.currentRound];
   const currentRoundSize = tournamentState.roundSizes[tournamentState.currentRound];
@@ -65,7 +95,8 @@ function calculateTournamentStats(tournamentState) {
     playersLeft: currentBracket.length,
     roundProgress: Math.round((1 - currentBracket.length / currentRoundSize) * 100),
     matchesCompleted: Math.floor((currentRoundSize - currentBracket.length) / 2),
-    totalMatchesInRound: Math.floor(currentRoundSize / 2)
+    totalMatchesInRound: Math.floor(currentRoundSize / 2),
+    upcomingMatches: getUpcomingMatches(tournamentState)
   };
 }
 
@@ -188,6 +219,7 @@ async function runTournament() {
           nft1: currentBracket[i],
           nft2: currentBracket[i + 1]
         };
+        // Emit updated state with new upcoming matches
         emitTournamentState();
 
         await new Promise(resolve => setTimeout(resolve, 2000));
@@ -277,6 +309,10 @@ function simulateBattle(nft1, nft2) {
             const loser = winner === nft1 ? nft2 : nft1;
             
             io.emit('battleResult', { winner, loser });
+            
+            // Emit updated tournament state with new upcoming matches
+            emitTournamentState();
+            
             resolve(winner);
             return;
           }
