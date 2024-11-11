@@ -217,45 +217,60 @@ function simulateBattle(nft1, nft2) {
       let turnCount = 0;
 
       const battle = setInterval(() => {
-        const damage = Math.random() > 0.3 ? 1 : 0; // 70% chance to hit
+        // Generate hit chance roll (0-100)
+        const hitRoll = Math.random() * 100;
+        const hitThreshold = 70; // 70% chance to hit
+        const willHit = hitRoll <= hitThreshold;
         
-        if (damage > 0) {
-          currentDefender.health -= damage;
-          
-          // Emit hit event with attacker and target info
-          io.emit('nftHit', {
-            attacker: currentAttacker,
-            target: currentDefender,
-            damage: damage
-          });
+        // Emit the hit chance roll result before the actual hit
+        io.emit('hitRoll', {
+          attacker: currentAttacker,
+          defender: currentDefender,
+          roll: Math.round(hitRoll),
+          threshold: hitThreshold,
+          success: willHit
+        });
 
-          // Emit updated state after hit
-          io.emit('battleUpdate', { 
-            nft1: nft1, 
-            nft2: nft2 
-          });
-        }
+        // Wait for roll animation before showing hit
+        setTimeout(() => {
+          if (willHit) {
+            currentDefender.health -= 1;
+            
+            // Emit hit event with attacker and target info
+            io.emit('nftHit', {
+              attacker: currentAttacker,
+              target: currentDefender,
+              damage: 1
+            });
 
-        if (currentDefender.health <= 0) {
-          clearInterval(battle);
-          const winner = currentDefender === nft1 ? nft2 : nft1;
-          const loser = winner === nft1 ? nft2 : nft1;
-          
-          io.emit('battleResult', { winner, loser });
-          resolve(winner);
-          return;
-        }
+            // Emit updated state after hit
+            io.emit('battleUpdate', { 
+              nft1: nft1, 
+              nft2: nft2 
+            });
+          }
 
-        // Only swap roles after both NFTs have had their turn
-        turnCount++;
-        if (turnCount % 2 === 0) {
-          // Swap attacker and defender roles after both have attacked
-          const temp = currentAttacker;
-          currentAttacker = currentDefender;
-          currentDefender = temp;
-        }
+          if (currentDefender.health <= 0) {
+            clearInterval(battle);
+            const winner = currentDefender === nft1 ? nft2 : nft1;
+            const loser = winner === nft1 ? nft2 : nft1;
+            
+            io.emit('battleResult', { winner, loser });
+            resolve(winner);
+            return;
+          }
 
-      }, 3000); // Each attack takes 3 seconds
+          // Swap roles after both NFTs have had their turn
+          turnCount++;
+          if (turnCount % 2 === 0) {
+            const temp = currentAttacker;
+            currentAttacker = currentDefender;
+            currentDefender = temp;
+          }
+
+        }, 1500); // Wait 1.5s after showing roll before showing hit
+
+      }, 4000); // Each attack cycle takes 4 seconds total
     }, 4000); // Wait for coin flip animation
   });
 }
