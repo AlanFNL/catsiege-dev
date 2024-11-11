@@ -85,17 +85,38 @@ function getUpcomingMatches(tournamentState) {
 
 // Modify the calculateTournamentStats function to fix the calculations
 function calculateTournamentStats(tournamentState) {
+  if (!tournamentState.brackets || !tournamentState.brackets.length) {
+    return {
+      currentRound: 0,
+      totalRounds: tournamentState.roundSizes.length,
+      remainingMatches: 0,
+      playersLeft: 0,
+      roundProgress: 0,
+      matchesCompleted: 0,
+      totalMatchesInRound: 0,
+      upcomingMatches: []
+    };
+  }
+
   const currentBracket = tournamentState.brackets[tournamentState.currentRound];
   const currentRoundSize = tournamentState.roundSizes[tournamentState.currentRound];
   const initialMatchesInRound = Math.floor(currentRoundSize / 2);
+  
+  // Calculate completed matches based on the difference between initial bracket size and current size
   const completedMatches = Math.floor((currentRoundSize - currentBracket.length) / 2);
   
+  // Calculate remaining matches in current round
+  const remainingMatches = Math.floor(currentBracket.length / 2);
+  
+  // Calculate round progress
+  const roundProgress = Math.round((completedMatches / initialMatchesInRound) * 100);
+
   return {
     currentRound: tournamentState.currentRound + 1,
     totalRounds: tournamentState.roundSizes.length,
-    remainingMatches: initialMatchesInRound - completedMatches,
+    remainingMatches,
     playersLeft: currentBracket.length,
-    roundProgress: Math.round((completedMatches / initialMatchesInRound) * 100),
+    roundProgress,
     matchesCompleted: completedMatches,
     totalMatchesInRound: initialMatchesInRound,
     upcomingMatches: getUpcomingMatches(tournamentState)
@@ -283,7 +304,6 @@ async function runTournament() {
     
     if (currentBracket.length <= 1) {
       console.log('Tournament complete! Winner:', currentBracket[0]);
-      
       tournamentState.isRunning = false;
       tournamentState.winners = currentBracket;
       tournamentState.completedAt = Date.now();
@@ -299,28 +319,33 @@ async function runTournament() {
     }
 
     const winners = [];
+    // Process matches in pairs
     for (let i = 0; i < currentBracket.length; i += 2) {
       if (i + 1 < currentBracket.length) {
+        // Update current match
         tournamentState.currentMatch = {
           nft1: currentBracket[i],
           nft2: currentBracket[i + 1]
         };
         
-        // Emit updated state before battle starts
+        // Emit state before battle
         emitTournamentState();
-
         await new Promise(resolve => setTimeout(resolve, 2000));
         
+        // Simulate battle and update winners
         const winner = await simulateBattle(currentBracket[i], currentBracket[i + 1]);
         winners.push({ ...winner, health: 2 });
         
-        // Emit updated state after each match
+        // Update tournament state after each match
+        tournamentState.brackets[tournamentState.currentRound] = currentBracket;
         emitTournamentState();
       } else {
+        // Handle bye matches
         winners.push({ ...currentBracket[i], health: 2 });
       }
     }
 
+    // Update tournament state for next round
     tournamentState = {
       ...tournamentState,
       currentRound: tournamentState.currentRound + 1,
@@ -328,7 +353,7 @@ async function runTournament() {
       lastUpdate: Date.now()
     };
 
-    // Save to database and emit state
+    // Save to database
     await Tournament.findByIdAndUpdate(tournamentState._id, {
       currentRound: tournamentState.currentRound,
       brackets: tournamentState.brackets,
