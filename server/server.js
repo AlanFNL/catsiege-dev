@@ -213,7 +213,7 @@ io.on('connection', async (socket) => {
   });
 });
 
-// Update the simulateBattle function to emit state after each match
+// Update the simulateBattle function to include delay after winner announcement
 function simulateBattle(nft1, nft2) {
   return new Promise(resolve => {
     // Initial coin flip
@@ -274,11 +274,13 @@ function simulateBattle(nft1, nft2) {
             
             io.emit('battleResult', { winner, loser });
             
-            // Update tournament state and emit immediately after battle ends
-            const stats = calculateTournamentStats(tournamentState);
-            io.emit('tournamentState', { ...tournamentState, stats });
-            
-            resolve(winner);
+            // Add delay before resolving the battle promise
+            setTimeout(() => {
+              // Update tournament state and emit
+              const stats = calculateTournamentStats(tournamentState);
+              io.emit('tournamentState', { ...tournamentState, stats });
+              resolve(winner);
+            }, 1000); // 1 second delay for winner animation
             return;
           }
 
@@ -335,6 +337,9 @@ async function runTournament() {
         // Simulate battle and update winners
         const winner = await simulateBattle(currentBracket[i], currentBracket[i + 1]);
         winners.push({ ...winner, health: 2 });
+        
+        // Add a small delay after the battle ends before updating state
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
         // Update tournament state after each match
         tournamentState.brackets[tournamentState.currentRound] = currentBracket;
