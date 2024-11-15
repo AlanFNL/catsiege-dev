@@ -185,7 +185,7 @@ io.on('connection', async (socket) => {
 
       // Create new tournament in database
       const newTournament = new Tournament({
-        brackets: [nfts.map(nft => ({ ...nft, health: 2, wins: 0, losses: 0 }))],
+        brackets: [nfts.map(nft => ({ ...nft, health: 32, wins: 0, losses: 0 }))],
         currentRound: 0,
         isRunning: true,
         roundSizes: [512, 256, 128, 64, 32, 16, 8, 4, 2, 1],
@@ -213,7 +213,7 @@ io.on('connection', async (socket) => {
   });
 });
 
-// Update the simulateBattle function to include delay after winner announcement
+// Update the simulateBattle function with new hit mechanics
 function simulateBattle(nft1, nft2) {
   return new Promise(resolve => {
     // Initial coin flip
@@ -236,28 +236,40 @@ function simulateBattle(nft1, nft2) {
       const battle = setInterval(() => {
         // Generate hit chance roll (0-100)
         const hitRoll = Math.random() * 100;
-        const hitThreshold = 70; // 70% chance to hit
-        const willHit = hitRoll <= hitThreshold;
+        let damage = 0;
+        let willHit = true;
+
+        // New damage calculation based on roll ranges
+        if (hitRoll < 10) {
+          willHit = false;  // Miss (0-9)
+          damage = 0;
+        } else if (hitRoll < 31) {
+          damage = 1;      // Light hit (10-30)
+        } else if (hitRoll < 71) {
+          damage = 2;      // Medium hit (31-70)
+        } else {
+          damage = 3;      // Critical hit (71-100)
+        }
         
-        // Emit the hit chance roll result before the actual hit
+        // Emit the hit chance roll result
         io.emit('hitRoll', {
           attacker: currentAttacker,
           defender: currentDefender,
           roll: Math.round(hitRoll),
-          threshold: hitThreshold,
+          damage: damage,
           success: willHit
         });
 
         // Wait for roll animation before showing hit
         setTimeout(() => {
           if (willHit) {
-            currentDefender.health -= 1;
+            currentDefender.health -= damage;
             
             // Emit hit event with attacker and target info
             io.emit('nftHit', {
               attacker: currentAttacker,
               target: currentDefender,
-              damage: 1
+              damage: damage
             });
 
             // Emit updated state after hit
@@ -320,41 +332,52 @@ async function runTournament() {
       break;
     }
 
-    const winners = [];
-    // Process matches in pairs
+    // Create pairs of matches
+    const matchPairs = [];
     for (let i = 0; i < currentBracket.length; i += 2) {
       if (i + 1 < currentBracket.length) {
-        // Update current match
-        tournamentState.currentMatch = {
+        matchPairs.push({
           nft1: currentBracket[i],
           nft2: currentBracket[i + 1]
-        };
-        
-        // Emit state before battle
-        emitTournamentState();
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        // Simulate battle and update winners
-        const winner = await simulateBattle(currentBracket[i], currentBracket[i + 1]);
-        winners.push({ ...winner, health: 2 });
-        
-        // Add a small delay after the battle ends before updating state
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Update tournament state after each match
-        tournamentState.brackets[tournamentState.currentRound] = currentBracket;
-        emitTournamentState();
-      } else {
-        // Handle bye matches
-        winners.push({ ...currentBracket[i], health: 2 });
+        });
       }
+    }
+
+    // Update tournament state with all current matches
+    tournamentState.currentMatches = matchPairs;
+    emitTournamentState();
+    
+    // Wait a moment for UI to update
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // Run all battles in the current round simultaneously
+    const battlePromises = matchPairs.map(pair => 
+      simulateBattle(pair.nft1, pair.nft2)
+    );
+
+    // Wait for all battles to complete
+    const winners = await Promise.all(battlePromises);
+
+    // Process winners and handle bye matches
+    const finalWinners = [];
+    winners.forEach(winner => {
+      finalWinners.push({ ...winner, health: 32 });
+    });
+
+    // Handle any remaining bye matches
+    if (currentBracket.length % 2 !== 0) {
+      finalWinners.push({ 
+        ...currentBracket[currentBracket.length - 1], 
+        health: 32 
+      });
     }
 
     // Update tournament state for next round
     tournamentState = {
       ...tournamentState,
       currentRound: tournamentState.currentRound + 1,
-      brackets: [...tournamentState.brackets, winners],
+      brackets: [...tournamentState.brackets, finalWinners],
+      currentMatches: [], // Clear current matches
       lastUpdate: Date.now()
     };
 
@@ -366,6 +389,8 @@ async function runTournament() {
     });
 
     emitTournamentState();
+    
+    // Brief pause before next round
     await new Promise(resolve => setTimeout(resolve, 3000));
   }
 }
