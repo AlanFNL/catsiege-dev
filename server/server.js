@@ -241,6 +241,7 @@ function simulateBattle(nft1, nft2, isFeatured) {
       });
     }
 
+    // Wait for coin flip animation (4s)
     setTimeout(() => {
       let currentAttacker = firstAttacker;
       let currentDefender = secondAttacker;
@@ -274,20 +275,51 @@ function simulateBattle(nft1, nft2, isFeatured) {
             success: willHit
           });
 
-          if (willHit) {
-            currentDefender.health -= damage;
-            
-            io.emit('nftHit', {
-              attacker: currentAttacker,
-              target: currentDefender,
-              damage: damage
-            });
+          // Wait 2s for roll animation before applying damage
+          setTimeout(() => {
+            if (willHit) {
+              currentDefender.health -= damage;
+              
+              io.emit('nftHit', {
+                attacker: currentAttacker,
+                target: currentDefender,
+                damage: damage
+              });
 
-            io.emit('battleUpdate', { 
-              nft1: nft1, 
-              nft2: nft2 
-            });
-          }
+              io.emit('battleUpdate', { 
+                nft1: nft1, 
+                nft2: nft2 
+              });
+            }
+
+            if (currentDefender.health <= 0) {
+              clearInterval(battle);
+              const winner = currentDefender === nft1 ? nft2 : nft1;
+              const loser = winner === nft1 ? nft2 : nft1;
+              
+              if (isFeatured) {
+                io.emit('battleResult', { winner, loser });
+              }
+              
+              // Add delay before resolving
+              setTimeout(() => {
+                const stats = calculateTournamentStats(tournamentState);
+                io.emit('tournamentState', { ...tournamentState, stats });
+                resolve(winner);
+              }, 2000); // 2s delay for winner animation
+              return;
+            }
+
+            // Swap roles after both NFTs have had their turn
+            turnCount++;
+            if (turnCount % 2 === 0) {
+              const temp = currentAttacker;
+              currentAttacker = currentDefender;
+              currentDefender = temp;
+            }
+
+          }, 2000); // 2s for roll animation
+
         } else {
           // For non-featured battles, just update health silently
           if (willHit) {
@@ -295,57 +327,9 @@ function simulateBattle(nft1, nft2, isFeatured) {
           }
         }
 
-        // Wait for roll animation before showing hit
-        setTimeout(() => {
-          if (willHit) {
-            currentDefender.health -= damage;
-            
-            // Emit hit event with attacker and target info
-            io.emit('nftHit', {
-              attacker: currentAttacker,
-              target: currentDefender,
-              damage: damage
-            });
+      }, 6000); // 6s for complete attack cycle (2s roll + 2s hit + 2s pause)
 
-            // Emit updated state after hit
-            io.emit('battleUpdate', { 
-              nft1: nft1, 
-              nft2: nft2 
-            });
-          }
-
-          if (currentDefender.health <= 0) {
-            clearInterval(battle);
-            const winner = currentDefender === nft1 ? nft2 : nft1;
-            const loser = winner === nft1 ? nft2 : nft1;
-            
-            // Only emit battle result for featured battle
-            if (isFeatured) {
-              io.emit('battleResult', { winner, loser });
-            }
-            
-            // Add delay before resolving the battle promise
-            setTimeout(() => {
-              // Update tournament state and emit
-              const stats = calculateTournamentStats(tournamentState);
-              io.emit('tournamentState', { ...tournamentState, stats });
-              resolve(winner);
-            }, 1000); // 1 second delay for winner animation
-            return;
-          }
-
-          // Swap roles after both NFTs have had their turn
-          turnCount++;
-          if (turnCount % 2 === 0) {
-            const temp = currentAttacker;
-            currentAttacker = currentDefender;
-            currentDefender = temp;
-          }
-
-        }, 1500); // Wait 1.5s after showing roll before showing hit
-
-      }, 4000); // Each attack cycle takes 4 seconds total
-    }, 4000); // Wait for coin flip animation
+    }, 4000); // 4s initial coin flip animation
   });
 }
 
