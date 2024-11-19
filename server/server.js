@@ -32,6 +32,8 @@ const tournamentSchema = new mongoose.Schema({
   currentRound: Number,
   brackets: Array,
   currentMatch: Object,
+  currentMatches: Array,
+  currentFeaturedMatch: Object,
   winners: Array,
   isRunning: Boolean,
   roundSizes: Array,
@@ -47,6 +49,8 @@ let tournamentState = {
   currentRound: 0,
   brackets: [],
   currentMatch: null,
+  currentMatches: [],
+  currentFeaturedMatch: null,
   winners: [],
   isRunning: false,
   roundSizes: [512, 256, 128, 64, 32, 16, 8, 4, 2, 1],
@@ -128,7 +132,8 @@ function emitTournamentState() {
   const stats = calculateTournamentStats(tournamentState);
   io.emit('tournamentState', {
     ...tournamentState,
-    stats
+    stats,
+    currentFeaturedMatch: tournamentState.currentFeaturedMatch
   });
 }
 
@@ -211,6 +216,15 @@ io.on('connection', async (socket) => {
   socket.on('disconnect', () => {
     console.log('Client disconnected');
   });
+
+  // Add handler for changing featured battle
+  socket.on('changeFeaturedBattle', (matchIndex) => {
+    if (tournamentState.currentMatches && 
+        tournamentState.currentMatches[matchIndex]) {
+      tournamentState.currentFeaturedMatch = tournamentState.currentMatches[matchIndex];
+      emitTournamentState();
+    }
+  });
 });
 
 // Update the simulateBattle function with new hit mechanics
@@ -251,14 +265,35 @@ function simulateBattle(nft1, nft2) {
           damage = 3;      // Critical hit (71-100)
         }
         
-        // Emit the hit chance roll result
-        io.emit('hitRoll', {
-          attacker: currentAttacker,
-          defender: currentDefender,
-          roll: Math.round(hitRoll),
-          damage: damage,
-          success: willHit
-        });
+        // Only emit battle updates if this is the featured battle
+        const isFeaturedBattle = 
+          (tournamentState.currentFeaturedMatch?.nft1.id === nft1.id &&
+           tournamentState.currentFeaturedMatch?.nft2.id === nft2.id);
+
+        if (isFeaturedBattle) {
+          // Emit hit roll
+          io.emit('hitRoll', {
+            attacker: currentAttacker,
+            defender: currentDefender,
+            roll: Math.round(hitRoll),
+            damage: damage,
+            success: willHit
+          });
+
+          // Emit hit info and battle updates
+          if (willHit) {
+            io.emit('nftHit', {
+              attacker: currentAttacker,
+              target: currentDefender,
+              damage: damage
+            });
+
+            io.emit('battleUpdate', { 
+              nft1: nft1, 
+              nft2: nft2 
+            });
+          }
+        }
 
         // Wait for roll animation before showing hit
         setTimeout(() => {
@@ -336,10 +371,16 @@ async function runTournament() {
     const matchPairs = [];
     for (let i = 0; i < currentBracket.length; i += 2) {
       if (i + 1 < currentBracket.length) {
-        matchPairs.push({
+        const matchPair = {
           nft1: currentBracket[i],
           nft2: currentBracket[i + 1]
-        });
+        };
+        matchPairs.push(matchPair);
+        
+        // Set first match as featured if none is set
+        if (!tournamentState.currentFeaturedMatch && i === 0) {
+          tournamentState.currentFeaturedMatch = matchPair;
+        }
       }
     }
 
