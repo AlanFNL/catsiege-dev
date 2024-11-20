@@ -50,6 +50,7 @@ let tournamentState = {
   brackets: [],
   currentMatch: null,
   currentMatches: [],
+  completedMatches: new Set(),
   currentFeaturedMatch: null,
   winners: [],
   isRunning: false,
@@ -106,11 +107,14 @@ function calculateTournamentStats(tournamentState) {
   const currentRoundSize = tournamentState.roundSizes[tournamentState.currentRound];
   const initialMatchesInRound = Math.floor(currentRoundSize / 2);
   
-  // Calculate completed matches based on the difference between initial bracket size and current size
-  const completedMatches = Math.floor((currentRoundSize - currentBracket.length) / 2);
+  // Count completed matches for this round
+  const completedMatches = tournamentState.currentMatches.reduce((count, match) => {
+    const matchKey = `${Math.min(match.nft1.id, match.nft2.id)}-${Math.max(match.nft1.id, match.nft2.id)}`;
+    return count + (tournamentState.completedMatches.has(matchKey) ? 1 : 0);
+  }, 0);
   
   // Calculate remaining matches in current round
-  const remainingMatches = Math.floor(currentBracket.length / 2);
+  const remainingMatches = initialMatchesInRound - completedMatches;
   
   // Calculate round progress
   const roundProgress = Math.round((completedMatches / initialMatchesInRound) * 100);
@@ -368,12 +372,21 @@ function simulateBattle(nft1, nft2, isFeatured) {
             // Check for battle end
             if (currentDefender.health <= 0) {
               clearInterval(battle);
+              
+              // Mark this match as completed
+              const matchKey = `${Math.min(nft1.id, nft2.id)}-${Math.max(nft1.id, nft2.id)}`;
+              tournamentState.completedMatches.add(matchKey);
+              
               if (shouldEmitEvents) {
                 io.emit('battleResult', { 
                   winner: currentAttacker, 
                   loser: currentDefender 
                 });
               }
+
+              // Emit updated tournament state with new stats
+              emitTournamentState();
+              
               resolve(currentAttacker);
               return;
             }
@@ -394,6 +407,9 @@ function simulateBattle(nft1, nft2, isFeatured) {
 // Update the runTournament function to emit state after each match pair
 async function runTournament() {
   while (tournamentState.isRunning) {
+    // Clear completed matches at the start of each round
+    tournamentState.completedMatches = new Set();
+    
     const currentBracket = tournamentState.brackets[tournamentState.currentRound];
     
     if (currentBracket.length <= 1) {
@@ -468,6 +484,7 @@ async function runTournament() {
       currentRound: tournamentState.currentRound + 1,
       brackets: [...tournamentState.brackets, finalWinners],
       currentMatches: [], // Clear current matches
+      completedMatches: new Set(), // Reset completed matches
       lastUpdate: Date.now()
     };
 
