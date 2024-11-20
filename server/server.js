@@ -254,29 +254,28 @@ function simulateBattle(nft1, nft2, isFeatured) {
       nft2Id: nft2.id 
     });
 
-    // Check if this is the featured battle
-    const isCurrentlyFeatured = tournamentState.currentFeaturedMatch && 
-      (tournamentState.currentFeaturedMatch.nft1.id === nft1.id && 
-       tournamentState.currentFeaturedMatch.nft2.id === nft2.id);
+    const shouldEmitEvents = isFeatured || (
+      tournamentState.currentFeaturedMatch && 
+      tournamentState.currentFeaturedMatch.nft1.id === nft1.id && 
+      tournamentState.currentFeaturedMatch.nft2.id === nft2.id
+    );
 
-    // Use either passed isFeatured or check if it's currently featured
-    const shouldEmitEvents = isFeatured || isCurrentlyFeatured;
-
+    // Initial coin flip
     if (shouldEmitEvents) {
-      console.log('Emitting coinFlip event for featured battle');
       io.emit('coinFlip', {
         winner: firstAttacker,
         loser: secondAttacker
       });
     }
 
+    // Start battle sequence
     setTimeout(() => {
+      // Initial dice roll attack
       const dice1 = Math.floor(Math.random() * 6) + 1;
       const dice2 = Math.floor(Math.random() * 6) + 1;
       const initialDamage = dice1 + dice2;
 
       if (shouldEmitEvents) {
-        console.log('Emitting diceRoll event for featured battle');
         io.emit('diceRoll', {
           attacker: firstAttacker,
           defender: secondAttacker,
@@ -286,11 +285,11 @@ function simulateBattle(nft1, nft2, isFeatured) {
         });
       }
 
+      // Apply initial damage
       setTimeout(() => {
         secondAttacker.health -= initialDamage;
 
         if (shouldEmitEvents) {
-          console.log('Emitting initial nftHit event for featured battle');
           io.emit('nftHit', {
             attacker: firstAttacker,
             target: secondAttacker,
@@ -303,7 +302,7 @@ function simulateBattle(nft1, nft2, isFeatured) {
           });
         }
 
-        // Continue with normal battle if initial attack wasn't lethal
+        // Check if initial attack was lethal
         if (secondAttacker.health <= 0) {
           if (shouldEmitEvents) {
             io.emit('battleResult', { 
@@ -315,9 +314,80 @@ function simulateBattle(nft1, nft2, isFeatured) {
           return;
         }
 
-        // Rest of battle logic...
-      }, 2000);
-    }, 4000);
+        // Start regular battle sequence after 3 seconds
+        setTimeout(() => {
+          let currentAttacker = secondAttacker; // Switch attacker after initial hit
+          let currentDefender = firstAttacker;
+          
+          const battle = setInterval(() => {
+            // Generate hit chance roll (0-100)
+            const hitRoll = Math.random() * 100;
+            let damage = 0;
+            let willHit = true;
+
+            // Damage calculation based on roll ranges
+            if (hitRoll < 10) {
+              willHit = false;  // Miss (0-9)
+              damage = 0;
+            } else if (hitRoll < 31) {
+              damage = 1;      // Light hit (10-30)
+            } else if (hitRoll < 71) {
+              damage = 2;      // Medium hit (31-70)
+            } else {
+              damage = 3;      // Critical hit (71-100)
+            }
+
+            if (shouldEmitEvents) {
+              io.emit('hitRoll', {
+                attacker: currentAttacker,
+                defender: currentDefender,
+                roll: Math.floor(hitRoll),
+                success: willHit,
+                damage: damage
+              });
+            }
+
+            // Apply damage if hit successful
+            if (willHit) {
+              currentDefender.health -= damage;
+              
+              if (shouldEmitEvents) {
+                io.emit('nftHit', {
+                  attacker: currentAttacker,
+                  target: currentDefender,
+                  damage: damage
+                });
+
+                io.emit('battleUpdate', { 
+                  nft1: nft1, 
+                  nft2: nft2 
+                });
+              }
+            }
+
+            // Check for battle end
+            if (currentDefender.health <= 0) {
+              clearInterval(battle);
+              if (shouldEmitEvents) {
+                io.emit('battleResult', { 
+                  winner: currentAttacker, 
+                  loser: currentDefender 
+                });
+              }
+              resolve(currentAttacker);
+              return;
+            }
+
+            // Switch attacker and defender
+            const temp = currentAttacker;
+            currentAttacker = currentDefender;
+            currentDefender = temp;
+          }, 6000); // Regular hits every 6 seconds
+
+        }, 3000); // Delay before starting regular hits
+
+      }, 2000); // Dice roll damage animation
+    }, 4000); // Initial coin flip animation
   });
 }
 
