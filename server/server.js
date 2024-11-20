@@ -150,7 +150,10 @@ io.on('connection', async (socket) => {
     const ongoingTournament = await Tournament.findOne({ isRunning: true });
     if (ongoingTournament) {
       console.log('Found ongoing tournament:', ongoingTournament._id);
-      tournamentState = ongoingTournament.toObject();
+      tournamentState = {
+        ...ongoingTournament.toObject(),
+        completedMatches: new Set()
+      };
       const stats = calculateTournamentStats(tournamentState);
       socket.emit('tournamentState', { ...tournamentState, stats });
     } else {
@@ -204,7 +207,11 @@ io.on('connection', async (socket) => {
 
       console.log('Saving new tournament...');
       await newTournament.save();
-      tournamentState = newTournament.toObject();
+      
+      tournamentState = {
+        ...newTournament.toObject(),
+        completedMatches: new Set()
+      };
       
       console.log('Tournament created, starting matches...');
       io.emit('tournamentState', tournamentState);
