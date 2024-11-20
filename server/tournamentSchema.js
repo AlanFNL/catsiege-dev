@@ -5,12 +5,41 @@ const tournamentSchema = new mongoose.Schema({
   currentRound: Number,
   brackets: Array,
   currentMatch: Object,
+  currentMatches: {
+    type: Array,
+    default: []
+  },
+  currentFeaturedMatch: {
+    type: Object,
+    default: null
+  },
+  completedMatchKeys: {
+    type: [String], // Store completed match keys as array of strings
+    default: []
+  },
   winners: Array,
   isRunning: Boolean,
   roundSizes: Array,
   lastUpdate: Date,
   startedAt: Date,
   completedAt: Date
+});
+
+// When converting to tournament state, transform completedMatchKeys array to Set
+tournamentSchema.methods.toTournamentState = function() {
+  const obj = this.toObject();
+  return {
+    ...obj,
+    completedMatches: new Set(obj.completedMatchKeys || [])
+  };
+};
+
+// Before saving, convert completedMatches Set to array
+tournamentSchema.pre('save', function(next) {
+  if (this.completedMatches instanceof Set) {
+    this.completedMatchKeys = Array.from(this.completedMatches);
+  }
+  next();
 });
 
 const Tournament = mongoose.model('Tournament', tournamentSchema);
