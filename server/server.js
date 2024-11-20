@@ -225,6 +225,20 @@ io.on('connection', async (socket) => {
       emitTournamentState();
     }
   });
+
+  // Add handler for getCurrentTournamentState
+  socket.on("getCurrentTournamentState", () => {
+    if (tournamentState.isRunning) {
+      // Calculate current stats
+      const stats = calculateTournamentStats(tournamentState);
+      
+      // Send complete state to the requesting client
+      socket.emit("tournamentState", {
+        ...tournamentState,
+        stats
+      });
+    }
+  });
 });
 
 // Update the simulateBattle function with new hit mechanics
@@ -243,91 +257,138 @@ function simulateBattle(nft1, nft2, isFeatured) {
 
     // Wait for coin flip animation (4s)
     setTimeout(() => {
-      let currentAttacker = firstAttacker;
-      let currentDefender = secondAttacker;
-      let turnCount = 0;
+      // Roll two 6-sided dice for initial attack
+      const dice1 = Math.floor(Math.random() * 6) + 1;
+      const dice2 = Math.floor(Math.random() * 6) + 1;
+      const initialDamage = dice1 + dice2;
 
-      const battle = setInterval(() => {
-        // Generate hit chance roll (0-100)
-        const hitRoll = Math.random() * 100;
-        let damage = 0;
-        let willHit = true;
+      if (isFeatured) {
+        io.emit('diceRoll', {
+          attacker: firstAttacker,
+          defender: secondAttacker,
+          dice1,
+          dice2,
+          totalDamage: initialDamage
+        });
+      }
 
-        // New damage calculation based on roll ranges
-        if (hitRoll < 10) {
-          willHit = false;  // Miss (0-9)
-          damage = 0;
-        } else if (hitRoll < 31) {
-          damage = 1;      // Light hit (10-30)
-        } else if (hitRoll < 71) {
-          damage = 2;      // Medium hit (31-70)
-        } else {
-          damage = 3;      // Critical hit (71-100)
-        }
+      // Wait for dice roll animation before applying damage
+      setTimeout(() => {
+        secondAttacker.health -= initialDamage;
         
-        // Only emit battle events if this is the featured battle
         if (isFeatured) {
-          io.emit('hitRoll', {
-            attacker: currentAttacker,
-            defender: currentDefender,
-            roll: Math.round(hitRoll),
-            damage: damage,
-            success: willHit
+          io.emit('nftHit', {
+            attacker: firstAttacker,
+            target: secondAttacker,
+            damage: initialDamage
           });
 
-          // Wait 2s for roll animation before applying damage
-          setTimeout(() => {
-            if (willHit) {
-              currentDefender.health -= damage;
-              
-              io.emit('nftHit', {
-                attacker: currentAttacker,
-                target: currentDefender,
-                damage: damage
-              });
-
-              io.emit('battleUpdate', { 
-                nft1: nft1, 
-                nft2: nft2 
-              });
-            }
-
-            if (currentDefender.health <= 0) {
-              clearInterval(battle);
-              const winner = currentDefender === nft1 ? nft2 : nft1;
-              const loser = winner === nft1 ? nft2 : nft1;
-              
-              if (isFeatured) {
-                io.emit('battleResult', { winner, loser });
-              }
-              
-              // Add delay before resolving
-              setTimeout(() => {
-                const stats = calculateTournamentStats(tournamentState);
-                io.emit('tournamentState', { ...tournamentState, stats });
-                resolve(winner);
-              }, 2000); // 2s delay for winner animation
-              return;
-            }
-
-            // Swap roles after both NFTs have had their turn
-            turnCount++;
-            if (turnCount % 2 === 0) {
-              const temp = currentAttacker;
-              currentAttacker = currentDefender;
-              currentDefender = temp;
-            }
-
-          }, 2000); // 2s for roll animation
-
-        } else {
-          // For non-featured battles, just update health silently
-          if (willHit) {
-            currentDefender.health -= damage;
-          }
+          io.emit('battleUpdate', { 
+            nft1: nft1, 
+            nft2: nft2 
+          });
         }
 
-      }, 6000); // 6s for complete attack cycle (2s roll + 2s hit + 2s pause)
+        // Check if the initial attack was lethal
+        if (secondAttacker.health <= 0) {
+          if (isFeatured) {
+            io.emit('battleResult', { 
+              winner: firstAttacker, 
+              loser: secondAttacker 
+            });
+          }
+          resolve(firstAttacker);
+          return;
+        }
+
+        // Continue with normal battle if initial attack wasn't lethal
+        let currentAttacker = secondAttacker; // Switch attacker after initial hit
+        let currentDefender = firstAttacker;
+        let turnCount = 0;
+
+        const battle = setInterval(() => {
+          // Generate hit chance roll (0-100)
+          const hitRoll = Math.random() * 100;
+          let damage = 0;
+          let willHit = true;
+
+          // New damage calculation based on roll ranges
+          if (hitRoll < 10) {
+            willHit = false;  // Miss (0-9)
+            damage = 0;
+          } else if (hitRoll < 31) {
+            damage = 1;      // Light hit (10-30)
+          } else if (hitRoll < 71) {
+            damage = 2;      // Medium hit (31-70)
+          } else {
+            damage = 3;      // Critical hit (71-100)
+          }
+          
+          // Only emit battle events if this is the featured battle
+          if (isFeatured) {
+            io.emit('hitRoll', {
+              attacker: currentAttacker,
+              defender: currentDefender,
+              roll: Math.round(hitRoll),
+              damage: damage,
+              success: willHit
+            });
+
+            // Wait 2s for roll animation before applying damage
+            setTimeout(() => {
+              if (willHit) {
+                currentDefender.health -= damage;
+                
+                io.emit('nftHit', {
+                  attacker: currentAttacker,
+                  target: currentDefender,
+                  damage: damage
+                });
+
+                io.emit('battleUpdate', { 
+                  nft1: nft1, 
+                  nft2: nft2 
+                });
+              }
+
+              if (currentDefender.health <= 0) {
+                clearInterval(battle);
+                const winner = currentDefender === nft1 ? nft2 : nft1;
+                const loser = winner === nft1 ? nft2 : nft1;
+                
+                if (isFeatured) {
+                  io.emit('battleResult', { winner, loser });
+                }
+                
+                // Add delay before resolving
+                setTimeout(() => {
+                  const stats = calculateTournamentStats(tournamentState);
+                  io.emit('tournamentState', { ...tournamentState, stats });
+                  resolve(winner);
+                }, 2000); // 2s delay for winner animation
+                return;
+              }
+
+              // Swap roles after both NFTs have had their turn
+              turnCount++;
+              if (turnCount % 2 === 0) {
+                const temp = currentAttacker;
+                currentAttacker = currentDefender;
+                currentDefender = temp;
+              }
+
+            }, 2000); // 2s for roll animation
+
+          } else {
+            // For non-featured battles, just update health silently
+            if (willHit) {
+              currentDefender.health -= damage;
+            }
+          }
+
+        }, 6000); // 6s for complete attack cycle (2s roll + 2s hit + 2s pause)
+
+      }, 2000); // 2s for dice roll animation
 
     }, 4000); // 4s initial coin flip animation
   });
