@@ -247,10 +247,23 @@ function simulateBattle(nft1, nft2, isFeatured) {
     const firstAttacker = Math.random() > 0.5 ? nft1 : nft2;
     const secondAttacker = firstAttacker === nft1 ? nft2 : nft1;
     
-    console.log('Battle starting:', { isFeatured, firstAttacker: firstAttacker.name });
+    console.log('Battle starting:', { 
+      isFeatured, 
+      firstAttacker: firstAttacker.name,
+      nft1Id: nft1.id,
+      nft2Id: nft2.id 
+    });
 
-    if (isFeatured) {
-      console.log('Emitting coinFlip event');
+    // Check if this is the featured battle
+    const isCurrentlyFeatured = tournamentState.currentFeaturedMatch && 
+      (tournamentState.currentFeaturedMatch.nft1.id === nft1.id && 
+       tournamentState.currentFeaturedMatch.nft2.id === nft2.id);
+
+    // Use either passed isFeatured or check if it's currently featured
+    const shouldEmitEvents = isFeatured || isCurrentlyFeatured;
+
+    if (shouldEmitEvents) {
+      console.log('Emitting coinFlip event for featured battle');
       io.emit('coinFlip', {
         winner: firstAttacker,
         loser: secondAttacker
@@ -262,8 +275,8 @@ function simulateBattle(nft1, nft2, isFeatured) {
       const dice2 = Math.floor(Math.random() * 6) + 1;
       const initialDamage = dice1 + dice2;
 
-      if (isFeatured) {
-        console.log('Emitting diceRoll event');
+      if (shouldEmitEvents) {
+        console.log('Emitting diceRoll event for featured battle');
         io.emit('diceRoll', {
           attacker: firstAttacker,
           defender: secondAttacker,
@@ -274,19 +287,37 @@ function simulateBattle(nft1, nft2, isFeatured) {
       }
 
       setTimeout(() => {
-        if (isFeatured) {
-          console.log('Emitting initial nftHit event');
+        secondAttacker.health -= initialDamage;
+
+        if (shouldEmitEvents) {
+          console.log('Emitting initial nftHit event for featured battle');
           io.emit('nftHit', {
             attacker: firstAttacker,
             target: secondAttacker,
             damage: initialDamage
           });
+
+          io.emit('battleUpdate', { 
+            nft1: nft1, 
+            nft2: nft2 
+          });
         }
 
-        // ... rest of the battle logic ...
+        // Continue with normal battle if initial attack wasn't lethal
+        if (secondAttacker.health <= 0) {
+          if (shouldEmitEvents) {
+            io.emit('battleResult', { 
+              winner: firstAttacker, 
+              loser: secondAttacker 
+            });
+          }
+          resolve(firstAttacker);
+          return;
+        }
 
-      }, 2000); // dice roll animation
-    }, 4000); // coin flip animation
+        // Rest of battle logic...
+      }, 2000);
+    }, 4000);
   });
 }
 
