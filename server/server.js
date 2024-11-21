@@ -252,130 +252,151 @@ io.on('connection', async (socket) => {
   });
 });
 
-// Add this function to select a featured battle
-function selectFeaturedBattle(matchPairs) {
-  if (!matchPairs || matchPairs.length === 0) return null;
-  // Randomly select a battle to feature
-  const randomIndex = Math.floor(Math.random() * matchPairs.length);
-  return matchPairs[randomIndex];
-}
-
-// Update the runTournament function to properly handle featured battles
-async function runTournament() {
-  while (tournamentState.isRunning) {
-    const currentBracket = tournamentState.brackets[tournamentState.currentRound];
-    if (currentBracket.length <= 1) {
-      tournamentState.winners = currentBracket;
-      tournamentState.isRunning = false;
-      emitTournamentState();
-      break;
-    }
-
-    // Create match pairs
-    const matchPairs = [];
-    for (let i = 0; i < currentBracket.length - 1; i += 2) {
-      matchPairs.push({
-        nft1: currentBracket[i],
-        nft2: currentBracket[i + 1]
-      });
-    }
-
-    // Select and set featured battle
-    tournamentState.currentFeaturedMatch = selectFeaturedBattle(matchPairs);
-    tournamentState.currentMatches = matchPairs;
-    
-    // Emit initial state with featured battle
-    emitTournamentState();
-
-    // Run battles
-    const battlePromises = matchPairs.map(pair => {
-      const isFeatured = pair === tournamentState.currentFeaturedMatch;
-      return simulateBattle(pair.nft1, pair.nft2, isFeatured);
-    });
-
-    const winners = await Promise.all(battlePromises);
-    // ... rest of the tournament logic ...
-  }
-}
-
-// Update the simulateBattle function to properly handle featured battles
+// Add these functions at the server level
 async function simulateBattle(nft1, nft2, isFeatured = false) {
-  // Determine who strikes first
-  const coinFlip = Math.random() < 0.5;
-  const firstAttacker = coinFlip ? nft1 : nft2;
-  const secondAttacker = coinFlip ? nft2 : nft1;
+  // Determine who goes first with a coin flip
+  const firstAttacker = Math.random() < 0.5 ? nft1 : nft2;
+  const secondAttacker = firstAttacker === nft1 ? nft2 : nft1;
 
   if (isFeatured) {
-    // Emit coin flip result for featured battle
+    console.log('Emitting coin flip for featured battle');
     io.emit('coinFlip', {
-      nft1,
-      nft2,
-      winner: firstAttacker
+      winner: firstAttacker,
+      loser: secondAttacker
     });
-    
-    // Add delay for animation
-    await delay(2000);
+    await delay(2000); // Wait for coin flip animation
   }
 
-  let currentAttacker = firstAttacker;
-  let currentDefender = secondAttacker;
-  
+  let attacker = firstAttacker;
+  let defender = secondAttacker;
+
   while (nft1.health > 0 && nft2.health > 0) {
-    // Calculate hit chance and damage
-    const hitRoll = Math.random();
-    const hitChance = 0.7; // 70% chance to hit
-    const damage = Math.floor(Math.random() * 10) + 1; // 1-10 damage
+    // Roll dice for damage
+    const dice1 = Math.floor(Math.random() * 6) + 1;
+    const dice2 = Math.floor(Math.random() * 6) + 1;
+    const totalDamage = dice1 + dice2;
 
-    if (hitRoll < hitChance) {
-      // Hit successful
-      if (currentDefender === nft1) {
-        nft1.health -= damage;
-      } else {
-        nft2.health -= damage;
-      }
-
-      if (isFeatured) {
-        io.emit('nftHit', {
-          attacker: currentAttacker,
-          defender: currentDefender,
-          damage,
-          remainingHealth: currentDefender === nft1 ? nft1.health : nft2.health
-        });
-        
-        // Add delay for animation
-        await delay(1500);
-      }
-    } else if (isFeatured) {
-      // Emit miss event for featured battle
-      io.emit('nftMiss', {
-        attacker: currentAttacker,
-        defender: currentDefender
+    if (isFeatured) {
+      console.log('Emitting dice roll for featured battle');
+      io.emit('diceRoll', {
+        attacker,
+        defender,
+        dice1,
+        dice2,
+        totalDamage
       });
-      
-      // Add delay for animation
-      await delay(1000);
+      await delay(2000); // Wait for dice roll animation
+
+      // Emit hit roll
+      io.emit('hitRoll', {
+        attacker,
+        defender,
+        roll: totalDamage,
+        required: 7 // Adjust this based on your game mechanics
+      });
+      await delay(2000); // Wait for hit roll animation
+    }
+
+    // Apply damage
+    defender.health -= totalDamage;
+
+    if (isFeatured) {
+      console.log('Emitting NFT hit for featured battle');
+      io.emit('nftHit', {
+        attacker,
+        defender,
+        damage: totalDamage
+      });
+      await delay(2000); // Wait for hit animation
+
+      // Emit battle update after each hit
+      io.emit('battleUpdate', {
+        nft1: nft1,
+        nft2: nft2,
+        currentAttacker: attacker,
+        currentDefender: defender
+      });
+      await delay(1000); // Brief pause between turns
     }
 
     // Swap attacker and defender
-    [currentAttacker, currentDefender] = [currentDefender, currentAttacker];
+    [attacker, defender] = [defender, attacker];
   }
 
-  // Determine winner
-  const winner = nft1.health > 0 ? nft1 : nft2;
-  const loser = nft1.health > 0 ? nft2 : nft1;
-  
-  // Update stats
-  winner.wins++;
-  loser.losses++;
+  // Return the winner
+  return nft1.health > 0 ? nft1 : nft2;
+}
 
-  // Mark match as completed
-  const matchKey = `${Math.min(nft1.id, nft2.id)}-${Math.max(nft1.id, nft2.id)}`;
-  tournamentState.completedMatches.add(matchKey);
+// Update the runTournament function to handle featured battles
+async function runTournament() {
+  while (tournamentState.isRunning) {
+    const currentBracket = tournamentState.brackets[tournamentState.currentRound];
+    
+    // Create match pairs
+    const matchPairs = [];
+    for (let i = 0; i < currentBracket.length - 1; i += 2) {
+      const pair = {
+        nft1: currentBracket[i],
+        nft2: currentBracket[i + 1]
+      };
+      matchPairs.push(pair);
+    }
 
-  // Emit state update
-  emitTournamentState();
+    // Select a featured match
+    const featuredMatchIndex = Math.floor(Math.random() * matchPairs.length);
+    tournamentState.currentFeaturedMatch = matchPairs[featuredMatchIndex];
+    
+    console.log('Setting featured match:', tournamentState.currentFeaturedMatch);
+    io.emit('featuredBattle', tournamentState.currentFeaturedMatch);
+    await delay(1000); // Give clients time to prepare
 
-  return winner;
+    // Run battles
+    const winners = await Promise.all(
+      matchPairs.map((pair, index) => 
+        simulateBattle(
+          pair.nft1, 
+          pair.nft2, 
+          index === featuredMatchIndex // Pass isFeatured flag
+        )
+      )
+    );
+
+    // Process winners and handle bye matches
+    const finalWinners = [];
+    winners.forEach(winner => {
+      finalWinners.push({ ...winner, health: 32 });
+    });
+
+    // Handle any remaining bye matches
+    if (currentBracket.length % 2 !== 0) {
+      finalWinners.push({ 
+        ...currentBracket[currentBracket.length - 1], 
+        health: 32 
+      });
+    }
+
+    // Update tournament state for next round
+    tournamentState = {
+      ...tournamentState,
+      currentRound: tournamentState.currentRound + 1,
+      brackets: [...tournamentState.brackets, finalWinners],
+      currentMatches: [], // Clear current matches
+      completedMatches: new Set(), // Reset completed matches
+      lastUpdate: Date.now()
+    };
+
+    // Save to database
+    await Tournament.findByIdAndUpdate(tournamentState._id, {
+      currentRound: tournamentState.currentRound,
+      brackets: tournamentState.brackets,
+      lastUpdate: Date.now()
+    });
+
+    emitTournamentState();
+    
+    // Brief pause before next round
+    await new Promise(resolve => setTimeout(resolve, 3000));
+  }
 }
 
 // Function to fetch NFTs from Magic Eden
