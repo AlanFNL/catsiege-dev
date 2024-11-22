@@ -19,7 +19,11 @@ const battleStateSchema = new mongoose.Schema({
     losses: { type: Number, default: 0 }
   },
   currentAttacker: { type: String, enum: ['nft1', 'nft2'] },
-  lastUpdate: Date
+  lastUpdate: Date,
+  battleHealth: {
+    nft1: { type: Number, default: 32 },
+    nft2: { type: Number, default: 32 }
+  }
 });
 
 // Tournament Schema
@@ -59,8 +63,15 @@ tournamentSchema.methods.toTournamentState = function() {
     ...obj,
     completedMatches: new Set(obj.completedMatchKeys || []),
     currentFeaturedMatch: obj.featuredBattle ? {
-      nft1: obj.featuredBattle.nft1,
-      nft2: obj.featuredBattle.nft2
+      nft1: {
+        ...obj.featuredBattle.nft1,
+        health: obj.featuredBattle.battleHealth?.nft1 || obj.featuredBattle.nft1.health
+      },
+      nft2: {
+        ...obj.featuredBattle.nft2,
+        health: obj.featuredBattle.battleHealth?.nft2 || obj.featuredBattle.nft2.health
+      },
+      currentAttacker: obj.featuredBattle.currentAttacker
     } : null
   };
 };
@@ -74,6 +85,10 @@ tournamentSchema.methods.updateFeaturedBattle = async function(battle) {
       nft1: battle.nft1,
       nft2: battle.nft2,
       currentAttacker: battle.currentAttacker || 'nft1',
+      battleHealth: {
+        nft1: battle.nft1.health,
+        nft2: battle.nft2.health
+      },
       lastUpdate: new Date()
     };
   }

@@ -273,20 +273,42 @@ io.on('connection', async (socket) => {
   });
 
   // Add handler for initial state request
-  socket.on('requestTournamentState', () => {
-    console.log('Client requested tournament state');
-    // Send current tournament state
-    socket.emit('tournamentState', {
-      currentRound: tournamentState.currentRound,
-      brackets: tournamentState.brackets,
-      currentMatch: tournamentState.currentMatch,
-      winners: tournamentState.winners,
-      isRunning: tournamentState.isRunning,
-      roundSizes: tournamentState.roundSizes,
-      matchesCompleted: tournamentState.completedMatches.size,
-      roundProgress: calculateRoundProgress(tournamentState),
-      featuredBattle: tournamentState.currentFeaturedMatch,
-    });
+  socket.on('requestTournamentState', async () => {
+    try {
+      const tournament = await Tournament.findById(tournamentState._id);
+      if (tournament) {
+        const state = tournament.toTournamentState();
+        const stats = calculateTournamentStats(state);
+        
+        socket.emit('tournamentState', {
+          ...state,
+          stats,
+          featuredBattle: tournament.featuredBattle
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching tournament state:', error);
+    }
+  });
+
+  // Add handler for health updates
+  socket.on('nftHit', async (data) => {
+    if (data.isFeatured && tournamentState._id) {
+      try {
+        // Update the health in the database
+        await Tournament.findByIdAndUpdate(
+          tournamentState._id,
+          {
+            $set: {
+              'featuredBattle.battleHealth.nft1': data.health.nft1,
+              'featuredBattle.battleHealth.nft2': data.health.nft2
+            }
+          }
+        );
+      } catch (error) {
+        console.error('Error updating battle health:', error);
+      }
+    }
   });
 });
 
@@ -621,19 +643,20 @@ async function fetchNFTsFromMagicEden() {
 async function emitFeaturedBattle(battle) {
   if (battle && battle.nft1 && battle.nft2) {
     const battleData = {
-      nft1: battle.nft1,
-      nft2: battle.nft2,
+      nft1: {
+        ...battle.nft1,
+        health: battle.nft1.health
+      },
+      nft2: {
+        ...battle.nft2,
+        health: battle.nft2.health
+      },
       isFeatured: true,
-      health: {
-        nft1: battle.nft1.health,
-        nft2: battle.nft2.health
-      }
+      currentAttacker: battle.currentAttacker
     };
     
-    // Update the tournament document with the new featured battle
     if (tournamentState._id) {
       try {
-        // Find and update in one operation
         await Tournament.findByIdAndUpdate(
           tournamentState._id,
           {
@@ -642,6 +665,10 @@ async function emitFeaturedBattle(battle) {
                 nft1: battle.nft1,
                 nft2: battle.nft2,
                 currentAttacker: battle.currentAttacker || 'nft1',
+                battleHealth: {
+                  nft1: battle.nft1.health,
+                  nft2: battle.nft2.health
+                },
                 lastUpdate: new Date()
               }
             }
