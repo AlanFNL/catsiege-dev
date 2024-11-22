@@ -5,6 +5,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const axios = require('axios');
+const Tournament = require('./tournamentSchema');
 
 const app = express();
 const server = http.createServer(app);
@@ -613,10 +614,21 @@ async function emitFeaturedBattle(battle) {
     // Update the tournament document with the new featured battle
     if (tournamentState._id) {
       try {
-        const tournament = await Tournament.findById(tournamentState._id);
-        if (tournament) {
-          await tournament.updateFeaturedBattle(battle);
-        }
+        // Find and update in one operation
+        await Tournament.findByIdAndUpdate(
+          tournamentState._id,
+          {
+            $set: {
+              featuredBattle: {
+                nft1: battle.nft1,
+                nft2: battle.nft2,
+                currentAttacker: battle.currentAttacker || 'nft1',
+                lastUpdate: new Date()
+              }
+            }
+          },
+          { new: true }
+        );
       } catch (error) {
         console.error('Error updating featured battle:', error);
       }
