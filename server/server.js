@@ -146,18 +146,14 @@ io.on('connection', async (socket) => {
   console.log('Client connected');
 
   try {
+    // First check for ongoing tournament
     const ongoingTournament = await Tournament.findOne({ isRunning: true });
     if (ongoingTournament) {
+      console.log('Found ongoing tournament:', ongoingTournament._id);
       tournamentState = {
         ...ongoingTournament.toObject(),
         completedMatches: new Set()
       };
-      
-      // If there's a current featured match, emit it
-      if (tournamentState.currentFeaturedMatch) {
-        socket.emit('featuredBattle', tournamentState.currentFeaturedMatch);
-      }
-      
       const stats = calculateTournamentStats(tournamentState);
       socket.emit('tournamentState', { ...tournamentState, stats });
     } else {
@@ -262,51 +258,177 @@ io.on('connection', async (socket) => {
   });
 });
 
-// Update the simulateBattle function to properly track featured battles
+// Update the simulateBattle function with new hit mechanics
 function simulateBattle(nft1, nft2, isFeatured) {
   return new Promise(resolve => {
     const firstAttacker = Math.random() > 0.5 ? nft1 : nft2;
     const secondAttacker = firstAttacker === nft1 ? nft2 : nft1;
     
-    // Track if this is the featured battle
-    const shouldEmitEvents = isFeatured;
+    console.log('Battle starting:', { 
+      isFeatured, 
+      firstAttacker: firstAttacker.name,
+      nft1Id: nft1.id,
+      nft2Id: nft2.id 
+    });
 
+    const shouldEmitEvents = isFeatured || (
+      tournamentState.currentFeaturedMatch && 
+      tournamentState.currentFeaturedMatch.nft1.id === nft1.id && 
+      tournamentState.currentFeaturedMatch.nft2.id === nft2.id
+    );
+
+    // Initial coin flip
     if (shouldEmitEvents) {
-      // Emit the featured battle at the start
-      emitFeaturedBattle({
-        nft1: { ...nft1 },
-        nft2: { ...nft2 }
+      io.emit('coinFlip', {
+        winner: firstAttacker,
+        loser: secondAttacker
       });
     }
 
-    // Rest of the battle logic...
-    // ... existing code ...
+    // Start battle sequence
+    setTimeout(() => {
+      // Initial dice roll attack
+      const dice1 = Math.floor(Math.random() * 6) + 1;
+      const dice2 = Math.floor(Math.random() * 6) + 1;
+      const initialDamage = dice1 + dice2;
 
-    // Update battle state after each hit
-    if (shouldEmitEvents) {
-      io.emit('battleUpdate', {
-        nft1: { ...nft1 },
-        nft2: { ...nft2 }
-      });
-    }
+      if (shouldEmitEvents) {
+        io.emit('diceRoll', {
+          attacker: firstAttacker,
+          defender: secondAttacker,
+          dice1,
+          dice2,
+          totalDamage: initialDamage
+        });
+      }
 
-    // ... rest of existing code ...
+      // Apply initial damage
+      setTimeout(() => {
+        secondAttacker.health -= initialDamage;
+
+        if (shouldEmitEvents) {
+          io.emit('nftHit', {
+            attacker: firstAttacker,
+            target: secondAttacker,
+            damage: initialDamage,
+            featuredBattle: shouldEmitEvents
+          });
+
+          io.emit('battleUpdate', { 
+            nft1: nft1, 
+            nft2: nft2,
+            featuredBattle: shouldEmitEvents
+          });
+        }
+
+        // Check if initial attack was lethal
+        if (secondAttacker.health <= 0) {
+          if (shouldEmitEvents) {
+            io.emit('battleResult', { 
+              winner: firstAttacker, 
+              loser: secondAttacker 
+            });
+          }
+          resolve(firstAttacker);
+          return;
+        }
+
+        // Start regular battle sequence after 3 seconds
+        setTimeout(() => {
+          let currentAttacker = secondAttacker; // Switch attacker after initial hit
+          let currentDefender = firstAttacker;
+          
+          const battle = setInterval(() => {
+            // Generate hit chance roll (0-100)
+            const hitRoll = Math.random() * 100;
+            let damage = 0;
+            let willHit = true;
+
+            // Damage calculation based on roll ranges
+            if (hitRoll < 10) {
+              willHit = false;  // Miss (0-9)
+              damage = 0;
+            } else if (hitRoll < 31) {
+              damage = 1;      // Light hit (10-30)
+            } else if (hitRoll < 71) {
+              damage = 2;      // Medium hit (31-70)
+            } else {
+              damage = 3;      // Critical hit (71-100)
+            }
+
+            if (shouldEmitEvents) {
+              io.emit('hitRoll', {
+                attacker: currentAttacker,
+                defender: currentDefender,
+                roll: Math.floor(hitRoll),
+                success: willHit,
+                damage: damage,
+                featuredBattle: shouldEmitEvents
+              });
+            }
+
+            // Apply damage if hit successful
+            if (willHit) {
+              currentDefender.health -= damage;
+              
+              if (shouldEmitEvents) {
+                io.emit('nftHit', {
+                  attacker: currentAttacker,
+                  target: currentDefender,
+                  damage: damage,
+                  featuredBattle: shouldEmitEvents
+                });
+
+                io.emit('battleUpdate', { 
+                  nft1: {
+                    ...nft1,
+                    health: nft1.health
+                  }, 
+                  nft2: {
+                    ...nft2,
+                    health: nft2.health
+                  },
+                  featuredBattle: shouldEmitEvents
+                });
+              }
+            }
+
+            // Check for battle end
+            if (currentDefender.health <= 0) {
+              clearInterval(battle);
+              
+              // Mark this match as completed
+              const matchKey = `${Math.min(nft1.id, nft2.id)}-${Math.max(nft1.id, nft2.id)}`;
+              tournamentState.completedMatches.add(matchKey);
+              
+              if (shouldEmitEvents) {
+                io.emit('battleResult', { 
+                  winner: currentAttacker, 
+                  loser: currentDefender 
+                });
+              }
+
+              // Emit updated tournament state with new stats
+              emitTournamentState();
+              
+              resolve(currentAttacker);
+              return;
+            }
+
+            // Switch attacker and defender
+            const temp = currentAttacker;
+            currentAttacker = currentDefender;
+            currentDefender = temp;
+          }, 6000); // Regular hits every 6 seconds
+
+        }, 3000); // Delay before starting regular hits
+
+      }, 2000); // Dice roll damage animation
+    }, 4000); // Initial coin flip animation
   });
 }
 
-// Update the emitFeaturedBattle function
-function emitFeaturedBattle(battle) {
-  if (battle && battle.nft1 && battle.nft2) {
-    // Update the tournament state
-    tournamentState.currentFeaturedMatch = battle;
-    
-    // Emit both the featured battle and updated tournament state
-    io.emit('featuredBattle', battle);
-    emitTournamentState();
-  }
-}
-
-// Update the runTournament function
+// Update the runTournament function to emit state after each match pair
 async function runTournament() {
   while (tournamentState.isRunning) {
     // Clear completed matches at the start of each round
@@ -335,29 +457,31 @@ async function runTournament() {
     for (let i = 0; i < currentBracket.length; i += 2) {
       if (i + 1 < currentBracket.length) {
         const matchPair = {
-          nft1: { ...currentBracket[i] },
-          nft2: { ...currentBracket[i + 1] }
+          nft1: currentBracket[i],
+          nft2: currentBracket[i + 1]
         };
         matchPairs.push(matchPair);
+        
+        // Set first match as featured if none is set
+        if (!tournamentState.currentFeaturedMatch && i === 0) {
+          tournamentState.currentFeaturedMatch = matchPair;
+        }
       }
     }
 
-    // Select featured battle and emit it immediately
+    // Select ONE featured battle for this round
     const randomIndex = Math.floor(Math.random() * matchPairs.length);
-    const featuredMatch = matchPairs[randomIndex];
-    tournamentState.currentFeaturedMatch = featuredMatch;
+    tournamentState.currentFeaturedMatch = matchPairs[randomIndex];
     tournamentState.currentMatches = matchPairs;
     
-    // Emit the initial state with the featured battle
-    emitFeaturedBattle(featuredMatch);
     emitTournamentState();
-
-    // Run battles
+    
+    // Run all battles simultaneously
     const battlePromises = matchPairs.map(pair => 
       simulateBattle(
-        pair.nft1,
-        pair.nft2,
-        pair === tournamentState.currentFeaturedMatch
+        pair.nft1, 
+        pair.nft2, 
+        pair === tournamentState.currentFeaturedMatch // Pass isFeatured flag
       )
     );
 
@@ -461,6 +585,20 @@ async function fetchNFTsFromMagicEden() {
   } catch (error) {
     console.error('Error fetching NFTs:', error);
     throw new Error(`Failed to fetch NFTs: ${error.message}`);
+  }
+}
+
+
+
+
+// In your server.js, update the emitFeaturedBattle function
+function emitFeaturedBattle(battle) {
+  if (battle && battle.nft1 && battle.nft2) {
+    io.emit('featuredBattle', {
+      nft1: battle.nft1,
+      nft2: battle.nft2,
+      featuredBattle: true
+    });
   }
 }
 
