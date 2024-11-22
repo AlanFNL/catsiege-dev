@@ -252,6 +252,23 @@ io.on('connection', async (socket) => {
       });
     }
   });
+
+  // Add handler for initial state request
+  socket.on('requestTournamentState', () => {
+    console.log('Client requested tournament state');
+    // Send current tournament state
+    socket.emit('tournamentState', {
+      currentRound: tournamentState.currentRound,
+      brackets: tournamentState.brackets,
+      currentMatch: tournamentState.currentMatch,
+      winners: tournamentState.winners,
+      isRunning: tournamentState.isRunning,
+      roundSizes: tournamentState.roundSizes,
+      matchesCompleted: tournamentState.completedMatches.size,
+      roundProgress: calculateRoundProgress(tournamentState),
+      featuredBattle: tournamentState.currentFeaturedMatch,
+    });
+  });
 });
 
 // Update the simulateBattle function with new hit mechanics
