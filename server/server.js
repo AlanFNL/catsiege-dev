@@ -150,12 +150,32 @@ io.on('connection', async (socket) => {
     const ongoingTournament = await Tournament.findOne({ isRunning: true });
     if (ongoingTournament) {
       console.log('Found ongoing tournament:', ongoingTournament._id);
+      
+      // Restore tournament state
       tournamentState = {
         ...ongoingTournament.toObject(),
         completedMatches: new Set()
       };
+
+      // Make sure there's a featured battle
+      if (!tournamentState.currentFeaturedMatch && tournamentState.currentMatches?.length > 0) {
+        tournamentState.currentFeaturedMatch = tournamentState.currentMatches[0];
+      }
+
+      // Calculate stats
       const stats = calculateTournamentStats(tournamentState);
+      
+      // Emit both tournament state and featured battle
       socket.emit('tournamentState', { ...tournamentState, stats });
+      
+      // If there's a featured battle, emit it
+      if (tournamentState.currentFeaturedMatch) {
+        socket.emit('featuredBattle', {
+          nft1: tournamentState.currentFeaturedMatch.nft1,
+          nft2: tournamentState.currentFeaturedMatch.nft2,
+          isFeatured: true
+        });
+      }
     } else {
       // If no ongoing tournament, check for most recent completed tournament
       const lastCompletedTournament = await Tournament.findOne(
@@ -461,19 +481,15 @@ async function runTournament() {
           nft2: currentBracket[i + 1]
         };
         matchPairs.push(matchPair);
-        
-        // Set first match as featured if none is set
-        if (!tournamentState.currentFeaturedMatch && i === 0) {
-          tournamentState.currentFeaturedMatch = matchPair;
-        }
       }
     }
 
-    // Select ONE featured battle for this round
-    const randomIndex = Math.floor(Math.random() * matchPairs.length);
-    tournamentState.currentFeaturedMatch = matchPairs[randomIndex];
+    // Always set a featured battle for the round
+    tournamentState.currentFeaturedMatch = matchPairs[0]; // Default to first match
     tournamentState.currentMatches = matchPairs;
     
+    // Emit the featured battle immediately
+    emitFeaturedBattle(tournamentState.currentFeaturedMatch);
     emitTournamentState();
     
     // Run all battles simultaneously
@@ -594,11 +610,16 @@ async function fetchNFTsFromMagicEden() {
 // In your server.js, update the emitFeaturedBattle function
 function emitFeaturedBattle(battle) {
   if (battle && battle.nft1 && battle.nft2) {
-    io.emit('featuredBattle', {
+    const battleData = {
       nft1: battle.nft1,
       nft2: battle.nft2,
-      featuredBattle: true
-    });
+      isFeatured: true,
+      health: {
+        nft1: battle.nft1.health,
+        nft2: battle.nft2.health
+      }
+    };
+    io.emit('featuredBattle', battleData);
   }
 }
 
