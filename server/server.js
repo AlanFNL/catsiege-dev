@@ -553,7 +553,7 @@ async function fetchNFTsFromMagicEden() {
           name: listing.token.name,
           image: listing.token.image,
           mint: listing.token.mint,
-          health: 2,
+          health: 22,
           wins: 0,
           losses: 0
         }));
