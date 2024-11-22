@@ -117,12 +117,31 @@ function calculateTournamentStats(tournamentState) {
 
 // Modify the tournament state emission to include stats
 function emitTournamentState() {
+  // Calculate stats first
   const stats = calculateTournamentStats(tournamentState);
-  io.emit('tournamentState', {
-    ...tournamentState,
-    stats,
-    currentFeaturedMatch: tournamentState.currentFeaturedMatch
-  });
+  
+  // Prepare the complete state object
+  const completeState = {
+    currentRound: tournamentState.currentRound,
+    totalRounds: tournamentState.roundSizes.length,
+    brackets: tournamentState.brackets,
+    currentMatch: tournamentState.currentMatch,
+    currentMatches: tournamentState.currentMatches,
+    winners: tournamentState.winners,
+    isRunning: tournamentState.isRunning,
+    stats: {
+      currentRound: stats.currentRound,
+      totalRounds: stats.totalRounds,
+      matchesCompleted: stats.matchesCompleted,
+      totalMatchesInRound: stats.totalMatchesInRound,
+      playersLeft: stats.playersLeft,
+      roundProgress: stats.roundProgress
+    },
+    featuredBattle: tournamentState.currentFeaturedMatch
+  };
+
+  console.log('Emitting tournament state:', completeState);
+  io.emit('tournamentState', completeState);
 }
 
 // Modified Socket.IO connection handling
