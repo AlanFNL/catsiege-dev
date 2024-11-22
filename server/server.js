@@ -28,23 +28,6 @@ mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('Connected to MongoDB'))
   .catch(err => console.error('MongoDB connection error:', err));
 
-// Tournament Schema
-const tournamentSchema = new mongoose.Schema({
-  currentRound: Number,
-  brackets: Array,
-  currentMatch: Object,
-  currentMatches: Array,
-  currentFeaturedMatch: Object,
-  winners: Array,
-  isRunning: Boolean,
-  roundSizes: Array,
-  lastUpdate: Date,
-  startedAt: Date,
-  completedAt: Date
-});
-
-const Tournament = mongoose.model('Tournament', tournamentSchema);
-
 // Modified tournament state initialization
 let tournamentState = {
   currentRound: 0,
