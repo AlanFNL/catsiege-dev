@@ -151,29 +151,21 @@ io.on('connection', async (socket) => {
     if (ongoingTournament) {
       console.log('Found ongoing tournament:', ongoingTournament._id);
       
-      // Restore tournament state
-      tournamentState = {
-        ...ongoingTournament.toObject(),
-        completedMatches: new Set()
-      };
+      // Restore tournament state including featured battle
+      tournamentState = ongoingTournament.toTournamentState();
 
-      // Make sure there's a featured battle
-      if (!tournamentState.currentFeaturedMatch && tournamentState.currentMatches?.length > 0) {
-        tournamentState.currentFeaturedMatch = tournamentState.currentMatches[0];
-      }
-
-      // Calculate stats
-      const stats = calculateTournamentStats(tournamentState);
+      // Emit tournament state and featured battle
+      socket.emit('tournamentState', tournamentState);
       
-      // Emit both tournament state and featured battle
-      socket.emit('tournamentState', { ...tournamentState, stats });
-      
-      // If there's a featured battle, emit it
-      if (tournamentState.currentFeaturedMatch) {
+      if (ongoingTournament.featuredBattle) {
         socket.emit('featuredBattle', {
-          nft1: tournamentState.currentFeaturedMatch.nft1,
-          nft2: tournamentState.currentFeaturedMatch.nft2,
-          isFeatured: true
+          nft1: ongoingTournament.featuredBattle.nft1,
+          nft2: ongoingTournament.featuredBattle.nft2,
+          isFeatured: true,
+          health: {
+            nft1: ongoingTournament.featuredBattle.nft1.health,
+            nft2: ongoingTournament.featuredBattle.nft2.health
+          }
         });
       }
     } else {
@@ -448,27 +440,19 @@ function simulateBattle(nft1, nft2, isFeatured) {
   });
 }
 
-// Update the runTournament function to emit state after each match pair
+// Update the runTournament function
 async function runTournament() {
   while (tournamentState.isRunning) {
-    // Clear completed matches at the start of each round
-    tournamentState.completedMatches = new Set();
-    
     const currentBracket = tournamentState.brackets[tournamentState.currentRound];
     
     if (currentBracket.length <= 1) {
-      console.log('Tournament complete! Winner:', currentBracket[0]);
-      tournamentState.isRunning = false;
-      tournamentState.winners = currentBracket;
-      tournamentState.completedAt = Date.now();
-      
+      // Clear featured battle when tournament ends
       await Tournament.findByIdAndUpdate(tournamentState._id, {
         isRunning: false,
         winners: currentBracket,
-        completedAt: Date.now()
+        completedAt: Date.now(),
+        featuredBattle: null
       });
-
-      emitTournamentState();
       break;
     }
 
@@ -484,14 +468,23 @@ async function runTournament() {
       }
     }
 
-    // Always set a featured battle for the round
-    tournamentState.currentFeaturedMatch = matchPairs[0]; // Default to first match
+    // Set and persist featured battle for the round
+    tournamentState.currentFeaturedMatch = matchPairs[0];
     tournamentState.currentMatches = matchPairs;
     
-    // Emit the featured battle immediately
-    emitFeaturedBattle(tournamentState.currentFeaturedMatch);
+    // Update database with new round state and featured battle
+    await Tournament.findByIdAndUpdate(tournamentState._id, {
+      currentRound: tournamentState.currentRound,
+      brackets: tournamentState.brackets,
+      currentMatches: matchPairs,
+      currentFeaturedMatch: matchPairs[0],
+      lastUpdate: Date.now()
+    });
+
+    // Emit the featured battle
+    await emitFeaturedBattle(tournamentState.currentFeaturedMatch);
     emitTournamentState();
-    
+
     // Run all battles simultaneously
     const battlePromises = matchPairs.map(pair => 
       simulateBattle(
@@ -604,11 +597,8 @@ async function fetchNFTsFromMagicEden() {
   }
 }
 
-
-
-
-// In your server.js, update the emitFeaturedBattle function
-function emitFeaturedBattle(battle) {
+// Update the emitFeaturedBattle function
+async function emitFeaturedBattle(battle) {
   if (battle && battle.nft1 && battle.nft2) {
     const battleData = {
       nft1: battle.nft1,
@@ -619,6 +609,19 @@ function emitFeaturedBattle(battle) {
         nft2: battle.nft2.health
       }
     };
+    
+    // Update the tournament document with the new featured battle
+    if (tournamentState._id) {
+      try {
+        const tournament = await Tournament.findById(tournamentState._id);
+        if (tournament) {
+          await tournament.updateFeaturedBattle(battle);
+        }
+      } catch (error) {
+        console.error('Error updating featured battle:', error);
+      }
+    }
+    
     io.emit('featuredBattle', battleData);
   }
 }
