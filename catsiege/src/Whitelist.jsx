@@ -108,7 +108,7 @@ function Whitelist() {
     if (email) {
       setIsLoading(true);
       try {
-        const binId = "67187316ad19ca34f8bd09bf"; // Replace with your actual Bin ID
+        const binId = "6749db2eacd3cb34a8b11fd9"; // Replace with your actual Bin ID
         const url = `https://api.jsonbin.io/v3/b/${binId}`;
 
         // First, get the current data
