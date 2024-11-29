@@ -2,7 +2,7 @@ import React from "react";
 import twitter from "./assets/twitter.svg";
 import ig from "./assets/ig.svg";
 import circleArrow from "./assets/circlearrow.png";
-
+import nftCalendar from "./assets/nftcalendar.png";
 export default function Footer() {
   return (
     <footer className="relative bg-black text-white py-8">
@@ -48,8 +48,14 @@ export default function Footer() {
 
           {/* Right: Privacy Policy */}
           <div className="text-sm">
-            <a href="#" className="hover:underline">
-              PRIVACY POLICY
+            <a
+              href="https://nftcalendar.io/b/solana/"
+              target="_blank"
+              rel="noopener"
+              className="hover:underline"
+            >
+              As seen on
+              <img src={nftCalendar} className="w-24 cursor-pointer"></img>
             </a>
           </div>
         </div>
