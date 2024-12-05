@@ -38,9 +38,21 @@ let tournamentState = {
   currentFeaturedMatch: null,
   winners: [],
   isRunning: false,
-  roundSizes: [512, 256, 128, 64, 32, 16, 8, 4, 2, 1],
+  roundSizes: [],
   lastUpdate: Date.now()
 };
+
+// Add this function to calculate round sizes based on actual NFT count
+function calculateRoundSizes(nftCount) {
+  const roundSizes = [];
+  let currentSize = nftCount;
+  while (currentSize > 1) {
+    roundSizes.push(currentSize);
+    currentSize = Math.ceil(currentSize / 2); // Use ceil to handle odd numbers
+  }
+  roundSizes.push(1); // Final winner
+  return roundSizes;
+}
 
 // Add this function to calculate upcoming matches
 function getUpcomingMatches(tournamentState) {
@@ -193,7 +205,7 @@ io.on('connection', async (socket) => {
 
   socket.on('initializeTournament', async () => {
     try {
-      // Check if there's already a running tournament
+      // Check for existing tournament (unchanged)
       const existingTournament = await Tournament.findOne({ isRunning: true });
       if (existingTournament) {
         console.log('Tournament already in progress');
@@ -205,16 +217,19 @@ io.on('connection', async (socket) => {
       const nfts = await fetchNFTsFromMagicEden();
       console.log(`Fetched ${nfts.length} NFTs`);
       
-      if (!nfts || nfts.length < 512) {
-        throw new Error('Not enough NFTs fetched');
+      if (!nfts || nfts.length < 2) { // Changed minimum requirement to 2 NFTs
+        throw new Error('Not enough NFTs fetched. Minimum 2 required.');
       }
+
+      // Calculate round sizes based on actual NFT count
+      const roundSizes = calculateRoundSizes(nfts.length);
 
       // Create new tournament in database
       const newTournament = new Tournament({
         brackets: [nfts.map(nft => ({ ...nft, health: 32, wins: 0, losses: 0 }))],
         currentRound: 0,
         isRunning: true,
-        roundSizes: [512, 256, 128, 64, 32, 16, 8, 4, 2, 1],
+        roundSizes: roundSizes,
         lastUpdate: Date.now(),
         startedAt: Date.now()
       });
@@ -482,13 +497,13 @@ function simulateBattle(nft1, nft2, isFeatured) {
   });
 }
 
-// Update the runTournament function
+// Update the runTournament function to handle odd numbers
 async function runTournament() {
   while (tournamentState.isRunning) {
     const currentBracket = tournamentState.brackets[tournamentState.currentRound];
     
     if (currentBracket.length <= 1) {
-      // Clear featured battle when tournament ends
+      // Tournament end handling (unchanged)
       await Tournament.findByIdAndUpdate(tournamentState._id, {
         isRunning: false,
         winners: currentBracket,
@@ -498,15 +513,20 @@ async function runTournament() {
       break;
     }
 
-    // Create pairs of matches
+    // Create pairs of matches, handling odd numbers
     const matchPairs = [];
+    const byeWinners = [];
+    
     for (let i = 0; i < currentBracket.length; i += 2) {
       if (i + 1 < currentBracket.length) {
-        const matchPair = {
+        // Regular match pair
+        matchPairs.push({
           nft1: currentBracket[i],
           nft2: currentBracket[i + 1]
-        };
-        matchPairs.push(matchPair);
+        });
+      } else {
+        // Odd NFT gets a bye
+        byeWinners.push({ ...currentBracket[i], health: 32 });
       }
     }
 
@@ -539,27 +559,19 @@ async function runTournament() {
     // Wait for all battles to complete
     const winners = await Promise.all(battlePromises);
 
-    // Process winners and handle bye matches
-    const finalWinners = [];
-    winners.forEach(winner => {
-      finalWinners.push({ ...winner, health: 32 });
-    });
-
-    // Handle any remaining bye matches
-    if (currentBracket.length % 2 !== 0) {
-      finalWinners.push({ 
-        ...currentBracket[currentBracket.length - 1], 
-        health: 32 
-      });
-    }
+    // Process winners including bye matches
+    const finalWinners = [
+      ...winners.map(winner => ({ ...winner, health: 32 })),
+      ...byeWinners
+    ];
 
     // Update tournament state for next round
     tournamentState = {
       ...tournamentState,
       currentRound: tournamentState.currentRound + 1,
       brackets: [...tournamentState.brackets, finalWinners],
-      currentMatches: [], // Clear current matches
-      completedMatches: new Set(), // Reset completed matches
+      currentMatches: [],
+      completedMatches: new Set(),
       lastUpdate: Date.now()
     };
 
@@ -589,7 +601,7 @@ async function fetchNFTsFromMagicEden() {
 
     // Make multiple requests in parallel
     const requests = Array.from({ length: batches }, (_, i) => 
-      axios.get('https://api-mainnet.magiceden.dev/v2/collections/froganas/listings', {
+      axios.get('https://api-mainnet.magiceden.dev/v2/collections/catsiege_zero/listings', {
         params: {
           limit: batchSize,
           offset: i * batchSize
