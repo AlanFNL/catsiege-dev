@@ -129,31 +129,46 @@ function calculateTournamentStats(tournamentState) {
 
 // Modify the tournament state emission to include stats
 function emitTournamentState() {
-  // Calculate stats first
   const stats = calculateTournamentStats(tournamentState);
-  
-  // Prepare the complete state object
-  const completeState = {
-    currentRound: tournamentState.currentRound,
-    totalRounds: tournamentState.roundSizes.length,
-    brackets: tournamentState.brackets,
-    currentMatch: tournamentState.currentMatch,
-    currentMatches: tournamentState.currentMatches,
-    winners: tournamentState.winners,
-    isRunning: tournamentState.isRunning,
-    stats: {
-      currentRound: stats.currentRound,
-      totalRounds: stats.totalRounds,
-      matchesCompleted: stats.matchesCompleted,
-      totalMatchesInRound: stats.totalMatchesInRound,
-      playersLeft: stats.playersLeft,
-      roundProgress: stats.roundProgress
-    },
-    featuredBattle: tournamentState.currentFeaturedMatch
-  };
+  io.emit('tournamentState', {
+    ...tournamentState,
+    stats,
+    winner: tournamentState.winners?.[0] || null,
+    isComplete: !tournamentState.isRunning && tournamentState.winners?.length > 0
+  });
+}
 
-  console.log('Emitting tournament state:', completeState);
-  io.emit('tournamentState', completeState);
+// Add this near other tournament state functions
+async function handleTournamentCompletion(winner) {
+  try {
+    // Update tournament state
+    tournamentState.isRunning = false;
+    tournamentState.winners = [winner];
+    tournamentState.completedAt = Date.now();
+
+    // Update database
+    await Tournament.findByIdAndUpdate(
+      tournamentState._id,
+      {
+        isRunning: false,
+        winners: [winner],
+        completedAt: Date.now()
+      },
+      { new: true }
+    );
+
+    // Emit tournament completion to all clients
+    io.emit('tournamentComplete', {
+      winner,
+      tournamentId: tournamentState._id
+    });
+
+    // Also emit final tournament state
+    emitTournamentState();
+
+  } catch (error) {
+    console.error('Error handling tournament completion:', error);
+  }
 }
 
 // Modified Socket.IO connection handling
@@ -323,6 +338,21 @@ io.on('connection', async (socket) => {
       } catch (error) {
         console.error('Error updating battle health:', error);
       }
+    }
+  });
+
+  // Add handler for tournament completion request
+  socket.on('requestTournamentComplete', async () => {
+    try {
+      const tournament = await Tournament.findById(tournamentState._id);
+      if (tournament && tournament.winners?.length > 0) {
+        socket.emit('tournamentComplete', {
+          winner: tournament.winners[0],
+          tournamentId: tournament._id
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching tournament completion:', error);
     }
   });
 });
@@ -586,6 +616,19 @@ async function runTournament() {
     
     // Brief pause before next round
     await new Promise(resolve => setTimeout(resolve, 3000));
+
+    // Check if we're in the final round (1v1)
+    if (tournamentState.currentRound === tournamentState.roundSizes.length - 1) {
+      const currentBracket = tournamentState.brackets[tournamentState.currentRound];
+      
+      // If we have exactly 2 players and one has won
+      if (currentBracket.length === 2 && tournamentState.winners.length > 0) {
+        const winner = tournamentState.winners[0];
+        console.log('Tournament winner determined:', winner);
+        await handleTournamentCompletion(winner);
+        return; // End tournament
+      }
+    }
   }
 }
 
