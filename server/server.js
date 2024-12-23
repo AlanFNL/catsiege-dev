@@ -141,30 +141,43 @@ function emitTournamentState() {
 // Add this near other tournament state functions
 async function handleTournamentCompletion(winner) {
   try {
+    console.log('Handling tournament completion with winner:', winner);
+
     // Update tournament state
     tournamentState.isRunning = false;
     tournamentState.winners = [winner];
     tournamentState.completedAt = Date.now();
+    tournamentState.currentFeaturedMatch = null; // Clear featured match
 
     // Update database
-    await Tournament.findByIdAndUpdate(
+    const updatedTournament = await Tournament.findByIdAndUpdate(
       tournamentState._id,
       {
         isRunning: false,
         winners: [winner],
-        completedAt: Date.now()
+        completedAt: Date.now(),
+        featuredBattle: null
       },
       { new: true }
     );
 
-    // Emit tournament completion to all clients
+    console.log('Tournament updated in database:', updatedTournament._id);
+
+    // First emit tournament completion
     io.emit('tournamentComplete', {
       winner,
-      tournamentId: tournamentState._id
+      tournamentId: tournamentState._id,
+      timestamp: Date.now()
     });
 
-    // Also emit final tournament state
-    emitTournamentState();
+    // Then emit final state
+    io.emit('tournamentState', {
+      ...tournamentState,
+      stats: calculateTournamentStats(tournamentState),
+      isComplete: true,
+      winner,
+      completedAt: Date.now()
+    });
 
   } catch (error) {
     console.error('Error handling tournament completion:', error);
@@ -503,13 +516,16 @@ function simulateBattle(nft1, nft2, isFeatured) {
               if (shouldEmitEvents) {
                 io.emit('battleResult', { 
                   winner: currentAttacker, 
-                  loser: currentDefender 
+                  loser: currentDefender,
+                  isFinalBattle: tournamentState.currentRound === tournamentState.roundSizes.length - 1
                 });
               }
 
-              // Emit updated tournament state with new stats
-              emitTournamentState();
-              
+              // If this is the final battle
+              if (tournamentState.currentRound === tournamentState.roundSizes.length - 1) {
+                handleTournamentCompletion(currentAttacker);
+              }
+
               resolve(currentAttacker);
               return;
             }
