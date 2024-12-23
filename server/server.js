@@ -6,6 +6,8 @@ const { Server } = require('socket.io');
 const cors = require('cors');
 const axios = require('axios');
 const Tournament = require('./tournamentSchema');
+const cron = require('node-cron');
+const moment = require('moment-timezone');
 
 const app = express();
 const server = http.createServer(app);
@@ -738,6 +740,75 @@ async function emitFeaturedBattle(battle) {
     io.emit('featuredBattle', battleData);
   }
 }
+
+// Schedule tournament at 19:00 Argentina time (UTC-3)
+// Format: minute hour day month day-of-week
+cron.schedule('0 19 * * *', async () => {
+  try {
+    console.log('Cron job triggered:', moment().tz('America/Argentina/Buenos_Aires').format());
+    
+    // Check if there's already a tournament running
+    const existingTournament = await Tournament.findOne({ isRunning: true });
+    if (existingTournament) {
+      console.log('Tournament already in progress, skipping scheduled start');
+      return;
+    }
+
+    // Check for completed tournaments today
+    const startOfDay = moment().tz('America/Argentina/Buenos_Aires').startOf('day');
+    const endOfDay = moment().tz('America/Argentina/Buenos_Aires').endOf('day');
+    
+    const todaysTournament = await Tournament.findOne({
+      startedAt: {
+        $gte: startOfDay.toDate(),
+        $lte: endOfDay.toDate()
+      }
+    });
+
+    if (todaysTournament) {
+      console.log('Tournament already ran today, skipping scheduled start');
+      return;
+    }
+
+    console.log('Starting scheduled tournament...');
+    
+    // Fetch NFTs and initialize tournament
+    const nfts = await fetchNFTsFromMagicEden();
+    if (!nfts || nfts.length < 2) {
+      throw new Error('Not enough NFTs fetched. Minimum 2 required.');
+    }
+
+    // Calculate round sizes based on actual NFT count
+    const roundSizes = calculateRoundSizes(nfts.length);
+
+    // Create new tournament in database
+    const newTournament = new Tournament({
+      brackets: [nfts.map(nft => ({ ...nft, health: 32, wins: 0, losses: 0 }))],
+      currentRound: 0,
+      isRunning: true,
+      roundSizes: roundSizes,
+      lastUpdate: Date.now(),
+      startedAt: Date.now()
+    });
+
+    await newTournament.save();
+    
+    tournamentState = {
+      ...newTournament.toObject(),
+      completedMatches: new Set()
+    };
+    
+    console.log('Scheduled tournament created, starting matches...');
+    io.emit('tournamentState', tournamentState);
+    runTournament();
+
+  } catch (error) {
+    console.error('Error in scheduled tournament start:', error);
+  }
+}, {
+  scheduled: true,
+  timezone: "America/Argentina/Buenos_Aires"
+});
 
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {

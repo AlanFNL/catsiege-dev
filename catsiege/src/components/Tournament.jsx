@@ -1,9 +1,70 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { io } from "socket.io-client";
-import vid from "../assets/fight.webm";
+
+// Import sound effects
+import hitSound from "../assets/hit.mp3";
+import missSound from "../assets/miss.mp3";
+import battleMusic from "../assets/battle-music.mp3";
+
+import WinnerDisplay from "./WinnerDisplay";
+import TournamentSocket from "./TournamentSocket";
+import CoinFlipDisplay from "./animations/CoinFlipDisplay";
+import DiceRollDisplay from "./animations/DiceRollDisplay";
+import HitRollDisplay from "./animations/HitRollDisplay";
+import BattleCard from "./BattleCard";
+import tournbg from "../assets/tourn-bg.webp";
+
+// Add sound management
+function useSoundSystem() {
+  const sounds = useRef({
+    hit: new Audio(hitSound),
+    miss: new Audio(missSound),
+    bgm: new Audio(battleMusic),
+  }).current;
+
+  useEffect(() => {
+    // Configure background music
+    sounds.bgm.loop = true;
+    sounds.bgm.volume = 0.3; // Adjust volume as needed
+
+    // Configure sound effects
+    sounds.hit.volume = 0.1;
+    sounds.miss.volume = 0.4;
+
+    return () => {
+      // Cleanup sounds on unmount
+      Object.values(sounds).forEach((sound) => {
+        sound.pause();
+        sound.currentTime = 0;
+      });
+    };
+  }, []);
+
+  const playSound = (soundName) => {
+    const sound = sounds[soundName];
+    if (sound) {
+      sound.currentTime = 0;
+      sound.play().catch((err) => console.log("Audio play failed:", err));
+    }
+  };
+
+  const toggleBGM = (shouldPlay) => {
+    if (shouldPlay) {
+      sounds.bgm.play().catch((err) => console.log("BGM play failed:", err));
+    } else {
+      sounds.bgm.pause();
+      sounds.bgm.currentTime = 0;
+    }
+  };
+
+  return { playSound, toggleBGM };
+}
 
 function Tournament() {
+  // Initialize socket ref first
+  const socketRef = useRef(null);
+
+  // Initialize all state variables
   const [tournamentState, setTournamentState] = useState({
     currentRound: 0,
     brackets: [],
@@ -12,573 +73,581 @@ function Tournament() {
     isRunning: false,
     roundSizes: [512, 256, 128, 64, 32, 16, 8, 4, 2, 1],
   });
+
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [coinFlipResult, setCoinFlipResult] = useState(null);
   const [battleState, setBattleState] = useState({
     nft1: null,
     nft2: null,
+    currentAttacker: null,
   });
   const [hitInfo, setHitInfo] = useState(null);
   const [loadedImages, setLoadedImages] = useState(new Set());
+  const [battleKey, setBattleKey] = useState(0);
+  const [hitRollInfo, setHitRollInfo] = useState(null);
+  const [featuredBattle, setFeaturedBattle] = useState(null);
+  const [diceRollInfo, setDiceRollInfo] = useState(null);
+  const [winner, setWinner] = useState(null);
+  const [hasAttemptedInitialFetch, setHasAttemptedInitialFetch] =
+    useState(false);
+  const [shouldShowBattle, setShouldShowBattle] = useState(false);
+  const [showWinner, setShowWinner] = useState(false);
 
-  const socketRef = useRef();
+  const [tournamentStats, setTournamentStats] = useState({
+    currentRound: 0,
+    totalRounds: 0,
+    matchesCompleted: 0,
+    totalMatchesInRound: 0,
+    playersLeft: 0,
+    roundProgress: 0,
+  });
 
+  const currentRoundRef = useRef(null);
+  const { playSound, toggleBGM } = useSoundSystem();
+
+  const [showSecretButton, setShowSecretButton] = useState(false);
+  const [secretCode, setSecretCode] = useState("");
+
+  // Add keyboard listener
   useEffect(() => {
-    const SERVER_URL = "https://catsiege-dev.onrender.com";
-    console.log("Connecting to server:", SERVER_URL);
-
-    socketRef.current = io(SERVER_URL);
-
-    socketRef.current.on("connect", () => {
-      console.log("Connected to server");
-    });
-
-    socketRef.current.on("connect_error", (error) => {
-      console.error("Connection error:", error);
-      setError("Failed to connect to server");
-      setIsLoading(false);
-    });
-
-    socketRef.current.on("tournamentState", (state) => {
-      console.log("Received tournament state:", state);
-      console.log("Tournament running:", state.isRunning);
-      if (state.winners?.length > 0) {
-        console.log("Winner:", state.winners[0]);
-      }
-      setTournamentState(state);
-      if (state.currentMatch) {
-        setBattleState({
-          nft1: state.currentMatch.nft1,
-          nft2: state.currentMatch.nft2,
-        });
-      }
-      setIsLoading(false);
-    });
-
-    socketRef.current.on("error", (error) => {
-      console.error("Socket error:", error);
-      setError(error.message);
-      setIsLoading(false);
-    });
-
-    socketRef.current.on("battleUpdate", ({ nft1, nft2 }) => {
-      console.log("Battle update received:", { nft1, nft2 });
-      setBattleState({ nft1, nft2 });
-    });
-
-    socketRef.current.on("coinFlip", (result) => {
-      console.log("Coin flip result:", result);
-      setCoinFlipResult(result);
-      setTimeout(() => setCoinFlipResult(null), 3000);
-    });
-
-    socketRef.current.on("nftHit", (data) => {
-      console.log("Hit event received:", data);
-      setHitInfo(data);
-      // Reset hit info after animation
-      setTimeout(() => setHitInfo(null), 1000);
-    });
-
-    return () => {
-      socketRef.current.disconnect();
+    const handleKeyPress = (e) => {
+      setSecretCode((prev) => {
+        const newCode = (prev + e.key).slice(-11); // Keep last 11 characters
+        if (newCode === "catsiege123") {
+          setShowSecretButton(true);
+          // Hide button after 5 seconds
+          setTimeout(() => setShowSecretButton(false), 5000);
+          return "";
+        }
+        return newCode;
+      });
     };
+
+    window.addEventListener("keydown", handleKeyPress);
+    return () => window.removeEventListener("keydown", handleKeyPress);
   }, []);
 
-  useEffect(() => {
-    if (battleState.nft1?.image && battleState.nft2?.image) {
-      const preloadImages = async () => {
-        const images = [battleState.nft1.image, battleState.nft2.image];
-
-        await Promise.all(
-          images.map((src) => {
-            if (!loadedImages.has(src)) {
-              return new Promise((resolve, reject) => {
-                const img = new Image();
-                img.src = src;
-                img.onload = () => {
-                  setLoadedImages((prev) => new Set([...prev, src]));
-                  resolve();
-                };
-                img.onerror = reject;
-              });
-            }
-            return Promise.resolve();
-          })
-        );
-      };
-
-      preloadImages();
+  // Define all handlers
+  const handleBattleUpdate = React.useCallback((data) => {
+    if (data.isFeatured) {
+      setBattleState({
+        nft1: {
+          ...data.nft1,
+          health: data.nft1.battleHealth?.nft1 || data.nft1.health,
+        },
+        nft2: {
+          ...data.nft2,
+          health: data.nft2.battleHealth?.nft2 || data.nft2.health,
+        },
+        currentAttacker: data.currentAttacker,
+      });
+      const sawWinner = localStorage.getItem("seenWinner");
+      // Check for winner in battle update
+      if (data.winner && !sawWinner) {
+        setWinner(data.winner);
+      }
     }
-  }, [battleState.nft1?.image, battleState.nft2?.image]);
+  }, []);
 
-  const initializeTournament = () => {
-    console.log("Initializing tournament...");
-    setIsLoading(true);
-    setError(null);
-    socketRef.current.emit("initializeTournament");
+  const handleHitRoll = React.useCallback((data) => {
+    // Properly structure the hit roll data
+    if (data) {
+      setHitRollInfo({
+        attacker: data.attacker || data.roll?.attacker,
+        defender: data.defender || data.roll?.defender,
+        roll: typeof data.roll === "number" ? data.roll : data.roll?.value,
+        required: data.required || data.roll?.required || 4, // default value if not provided
+      });
+
+      // Clear hit roll info after animation
+      setTimeout(() => {
+        setHitRollInfo(null);
+      }, 2000);
+    }
+  }, []);
+
+  const handleNftHit = React.useCallback((data) => {
+    if (data.isFeatured) {
+      // Update hit info with complete data
+      setHitInfo({
+        attacker: data.attacker,
+        defender: data.target || data.defender,
+        damage: data.damage,
+        timestamp: Date.now(),
+      });
+
+      // Update battle state to reflect new health values and current attacker
+      setBattleState((prevState) => ({
+        ...prevState,
+        nft1: {
+          ...prevState.nft1,
+          health: data.health?.nft1 || prevState.nft1.health,
+        },
+        nft2: {
+          ...prevState.nft2,
+          health: data.health?.nft2 || prevState.nft2.health,
+        },
+        currentAttacker: data.attacker,
+      }));
+
+      // Clear hit info after animation
+      setTimeout(() => {
+        setHitInfo(null);
+      }, 2000);
+    }
+  }, []);
+
+  const handleCoinFlip = React.useCallback((data) => {
+    if (data) {
+      setCoinFlipResult({
+        result: data.result,
+        nft1: data.nft1,
+        nft2: data.nft2,
+        winner: data.winner,
+      });
+
+      // Clear coin flip after animation
+      setTimeout(() => {
+        setCoinFlipResult(null);
+      }, 3000);
+    }
+  }, []);
+
+  const handleFeaturedBattle = React.useCallback((battle) => {
+    if (battle.isFeatured) {
+      setFeaturedBattle(battle);
+      // Also update battle state when receiving a new featured battle
+      setBattleState({
+        nft1: battle.nft1,
+        nft2: battle.nft2,
+      });
+      setBattleKey((prev) => prev + 1);
+    }
+  }, []);
+
+  const handleTournamentState = React.useCallback((state) => {
+    if (state) {
+      setTournamentState((prevState) => ({
+        ...prevState,
+        currentRound: state.currentRound || 0,
+        brackets: state.brackets || [],
+        currentMatch: state.currentMatch,
+        winners: state.winners || [],
+        isRunning: state.isRunning || false,
+        roundSizes: state.roundSizes || [512, 256, 128, 64, 32, 16, 8, 4, 2, 1],
+      }));
+
+      const sawWinner = localStorage.getItem("seenWinner");
+
+      // Check for winner in tournament state
+      if (state.winners?.length > 0 && !sawWinner) {
+        setWinner(state.winners[0]);
+      }
+
+      // Update tournament stats with more detailed information
+      setTournamentStats((prevStats) => ({
+        currentRound: state.stats?.currentRound || 0,
+        totalRounds: state.stats?.totalRounds || 10,
+        matchesCompleted: state.stats?.matchesCompleted || 0,
+        totalMatchesInRound: state.stats?.totalMatchesInRound || 0,
+        playersLeft: state.stats?.playersLeft || 0,
+        roundProgress: state.stats?.roundProgress || 0,
+        isFinalRound: state.stats?.playersLeft === 2,
+      }));
+
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Add effect to request initial state
+  useEffect(() => {
+    if (!hasAttemptedInitialFetch && socketRef.current) {
+      socketRef.current.emit("requestTournamentState");
+      setHasAttemptedInitialFetch(true);
+    }
+  }, [hasAttemptedInitialFetch]);
+
+  const handleInitializeTournament = () => {
+    if (socketRef.current) {
+      socketRef.current.emit("initializeTournament");
+    } else {
+      console.error("Socket not connected");
+    }
   };
 
+  // Add this handler if it's missing
+  const handleImageLoad = (image) => {
+    setLoadedImages((prev) => new Set(prev).add(image));
+  };
+
+  // Update the dice roll handler
+  const handleDiceRoll = React.useCallback((data) => {
+    if (data && data.attacker && data.defender) {
+      setDiceRollInfo(data);
+      // Clear dice roll info after animation
+      setTimeout(() => {
+        setDiceRollInfo(null);
+      }, 2000);
+    }
+  }, []);
+
+  // Add handler to close winner display if needed
+  const handleCloseWinner = () => {
+    setWinner(null);
+
+    localStorage.setItem("seenWinner", "true");
+  };
+
+  // Add handleError callback
+  const handleError = React.useCallback((error) => {
+    setError(error);
+    setIsLoading(false);
+  }, []);
+
+  // Add this effect to handle tournament completion
+  useEffect(() => {
+    if (tournamentState && tournamentStats) {
+      const isRunning = tournamentState.isRunning;
+      const isLastRound =
+        tournamentStats.currentRound === tournamentStats.totalRounds;
+      const isFinalBattle = tournamentStats.playersLeft === 2;
+      const hasWinner = tournamentState.winners?.length > 0;
+      const sawWinner = localStorage.getItem("seenWinner");
+      // Check for tournament completion
+      if (
+        isRunning &&
+        isLastRound &&
+        isFinalBattle &&
+        hasWinner &&
+        !sawWinner
+      ) {
+        setWinner(tournamentState.winners[0]);
+
+        // Emit tournament completion event
+        if (socketRef.current) {
+          socketRef.current.emit("tournamentComplete", {
+            winner: tournamentState.winners[0],
+          });
+        }
+      }
+    }
+  }, [tournamentState, tournamentStats]);
+
+  // Add handler for tournament completion
+  const handleTournamentComplete = React.useCallback((data) => {
+    if (data.winner) {
+      setWinner(data.winner);
+      setShowWinner(true);
+    }
+  }, []);
+
   return (
-    <div className="min-h-screen relative bg-black text-white">
-      {/* Video Background */}
-      <video
-        autoPlay
-        src={vid}
-        loop
-        muted
-        playsInline
-        className="absolute inset-0 w-full h-full object-cover opacity-20"
-      ></video>
+    <div className="relative">
+      <TournamentSocket
+        socketRef={socketRef}
+        onBattleUpdate={handleBattleUpdate}
+        onHitRoll={handleHitRoll}
+        onNftHit={handleNftHit}
+        onCoinFlip={handleCoinFlip}
+        onDiceRoll={handleDiceRoll}
+        onFeaturedBattle={handleFeaturedBattle}
+        onTournamentState={handleTournamentState}
+        onTournamentComplete={handleTournamentComplete}
+        onError={handleError}
+        requestInitialState={true}
+      >
+        {/* Main container with responsive padding */}
+        <div className="relative min-h-screen bg-gray-900 p-3 sm:p-4 md:p-6">
+          <div className="absolute inset-0 w-full h-full">
+            <img
+              src={tournbg}
+              className="w-full h-full object-cover"
+              style={{
+                filter: "brightness(0.4)",
+                willChange: "transform", // Optimization hint
+              }}
+            ></img>
+          </div>
+          <AnimatePresence>
+            {showSecretButton && (
+              <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="fixed top-4 right-4 z-50"
+              >
+                <motion.button
+                  onClick={handleInitializeTournament}
+                  className="px-4 py-2 bg-red-500/50 hover:bg-red-500/70 
+                       text-white rounded-lg border border-red-400/30
+                       text-sm font-mono shadow-lg backdrop-blur-sm"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  Initialize Tournament
+                </motion.button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+          ;{/* Responsive grid layout */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[300px_1fr_300px] gap-4 md:gap-6 h-full">
+            {/* Left column - Tournament Stats */}
+            {tournamentState.isRunning && (
+              <div className="md:col-span-1 lg:col-span-1">
+                <TournamentStatus
+                  stats={tournamentStats}
+                  battleState={battleState}
+                  toggleBGM={toggleBGM}
+                  currentMatches={tournamentState.currentMatches}
+                />
+              </div>
+            )}
 
-      {/* Content Container with overlay */}
-      <div className="relative z-10 p-8">
-        <AnimatePresence>
-          {coinFlipResult && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center"
-            >
-              <CoinFlip
-                winner={coinFlipResult.winner}
-                loser={coinFlipResult.loser}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <div className="container mx-auto">
-          <h1 className="text-4xl font-bold mb-8">NFT Tournament</h1>
-
-          {error && (
-            <div className="bg-red-500 text-white p-4 rounded-lg mb-4">
-              {error}
-            </div>
-          )}
-
-          {isLoading ? (
-            <div className="text-center">
-              <div className="animate-spin text-4xl mb-4">⚡</div>
-              <p>Loading tournament status...</p>
-            </div>
-          ) : (
-            <>
-              {!tournamentState.isRunning &&
-                !tournamentState.winners?.length &&
-                tournamentState.brackets.length === 0 && (
-                  <button
-                    onClick={initializeTournament}
-                    disabled={isLoading}
-                    className={`${
-                      isLoading
-                        ? "bg-gray-600"
-                        : "bg-blue-600 hover:bg-blue-700"
-                    } px-6 py-2 rounded-lg transition-colors relative`}
-                  >
-                    {isLoading ? (
-                      <div className="flex items-center">
-                        <span className="animate-spin mr-2">⚡</span>
-                        Loading NFTs...
-                      </div>
-                    ) : (
-                      "Start Tournament"
-                    )}
-                  </button>
-                )}
-
-              {tournamentState.isRunning && tournamentState.currentMatch && (
-                <div className="mb-8">
-                  <h2 className="text-2xl mb-4">Current Battle</h2>
-                  <div className="flex justify-center gap-8 items-center">
-                    <BattleCard
-                      nft={
-                        battleState.nft1 || tournamentState.currentMatch.nft1
-                      }
-                      isAttacker={
-                        coinFlipResult?.winner?.mint === battleState.nft1?.mint
-                      }
-                      hitInfo={hitInfo}
-                    />
-                    <motion.div className="text-4xl flex items-center font-bold">
-                      VS
-                    </motion.div>
-                    <BattleCard
-                      nft={
-                        battleState.nft2 || tournamentState.currentMatch.nft2
-                      }
-                      isAttacker={
-                        coinFlipResult?.winner?.mint === battleState.nft2?.mint
-                      }
-                      hitInfo={hitInfo}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {tournamentState.isRunning && (
-                <div className="mt-8">
-                  <h2 className="text-2xl mb-4">
-                    Round {tournamentState.currentRound + 1} - Remaining:{" "}
-                    {
-                      tournamentState.brackets[tournamentState.currentRound]
-                        ?.length
+            {/* Middle column - Battle Cards */}
+            <div className="md:col-span-2 lg:col-span-1 flex items-center justify-center min-h-[400px] md:min-h-[600px]">
+              {tournamentState.isRunning && featuredBattle && (
+                <div className="flex flex-col sm:flex-row gap-4 sm:gap-8 items-center">
+                  <BattleCard
+                    key={`${battleKey}-1`}
+                    nft={battleState.nft1 || featuredBattle.nft1}
+                    isAttacker={
+                      hitInfo?.attacker?.id ===
+                      (battleState.nft1?.id || featuredBattle.nft1?.id)
                     }
-                  </h2>
-                  <div className="max-h-[600px] overflow-y-auto rounded-lg border border-gray-700 p-4">
-                    <div className="grid grid-cols-4 gap-4">
-                      <AnimatePresence>
-                        {tournamentState.brackets[
-                          tournamentState.currentRound
-                        ]?.map((nft) => (
-                          <NFTCard
-                            key={nft.id}
-                            nft={nft}
-                            isActive={
-                              nft.mint === battleState.nft1?.mint ||
-                              nft.mint === battleState.nft2?.mint
-                            }
-                          />
-                        ))}
-                      </AnimatePresence>
-                    </div>
+                    hitInfo={hitInfo}
+                    battleKey={battleKey}
+                    onImageLoad={handleImageLoad}
+                    showVideo={false}
+                    playSound={playSound}
+                  />
+                  <div className="text-xl sm:text-2xl text-purple-500 font-bold z-[5]">
+                    VS
                   </div>
+                  <BattleCard
+                    key={`${battleKey}-2`}
+                    nft={battleState.nft2 || featuredBattle.nft2}
+                    isAttacker={
+                      hitRollInfo?.attacker?.id ===
+                      (battleState.nft2?.id || featuredBattle.nft2?.id)
+                    }
+                    hitInfo={hitInfo}
+                    battleKey={battleKey}
+                    onImageLoad={handleImageLoad}
+                    showVideo={false}
+                    playSound={playSound}
+                  />
                 </div>
               )}
+            </div>
 
-              {!tournamentState.isRunning &&
-                tournamentState.winners?.length > 0 && (
-                  <>
-                    <WinnerDisplay winner={tournamentState.winners[0]} />
-                    <button
-                      onClick={initializeTournament}
-                      className="mt-8 bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded-lg transition-colors"
-                    >
-                      Start New Tournament
-                    </button>
-                  </>
-                )}
-            </>
+            {/* Right column - Battle Rules */}
+            {tournamentState.isRunning && (
+              <div className="md:col-span-1 lg:col-span-1">
+                <BattleRules />
+              </div>
+            )}
+          </div>
+          {/* Tournament Progress at bottom */}
+          {tournamentState.isRunning && (
+            <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 w-full max-w-md px-4">
+              <TournamentProgress stats={tournamentStats} />
+            </div>
           )}
+          {/* Animation overlays with responsive positioning */}
+          <div className="fixed inset-0 pointer-events-none z-[100]">
+            <AnimatePresence>
+              {coinFlipResult && (
+                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                  <CoinFlipDisplay
+                    result={coinFlipResult.result}
+                    nft1={coinFlipResult.nft1}
+                    nft2={coinFlipResult.nft2}
+                    winner={coinFlipResult.winner}
+                  />
+                </div>
+              )}
+              {diceRollInfo && <DiceRollDisplay roll={diceRollInfo} />}
+              {hitRollInfo && <HitRollDisplay roll={hitRollInfo} />}
+            </AnimatePresence>
+          </div>
+          {/* Winner Display - Move outside other animation containers */}
+          <AnimatePresence mode="wait">
+            {winner && (
+              <div className="fixed inset-0 z-50">
+                <WinnerDisplay winner={winner} onClose={handleCloseWinner} />
+              </div>
+            )}
+          </AnimatePresence>
         </div>
-      </div>
+      </TournamentSocket>
+
+      {/* Error display */}
+      {error && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="fixed top-4 left-1/2 transform -translate-x-1/2 
+                     bg-red-500/90 text-white px-4 py-2 rounded-lg z-50"
+        >
+          {error.message || "An error occurred"}
+        </motion.div>
+      )}
     </div>
   );
 }
 
-// Helper components
-const BattleCard = ({ nft, isAttacker, hitInfo }) => {
-  const [wasHit, setWasHit] = useState(false);
-  const [isAttacking, setIsAttacking] = useState(false);
-  const prevHealth = useRef(nft.health);
-  const hitInfoRef = useRef(null);
-  const [imageLoaded, setImageLoaded] = useState(false);
+// Update BattleRules component to be responsive
+const BattleRules = () => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    className="p-3 sm:p-4 md:p-6 rounded-lg border border-gray-700 bg-black/60 backdrop-blur-sm w-full"
+  >
+    <h3 className="text-base lg:text-lg font-bold text-gray-200 mb-2 md:mb-4">
+      ⚔️ Battle Rules
+    </h3>
+    <div className="text-xs sm:text-sm text-gray-300 space-y-2 md:space-y-3">
+      <p className="flex items-center gap-3">
+        <span className="text-purple-400">❤️</span>
+        <span>Each NFT starts with 32 HP</span>
+      </p>
+      <p className="flex items-center gap-3">
+        <span className="text-purple-400">🎲</span>
+        <span>Coin flip determines who attacks first</span>
+      </p>
+      <p className="flex items-center gap-3">
+        <span className="text-purple-400">🎯</span>
+        <span>Attack rolls need 11 or higher to hit</span>
+      </p>
+      <p className="flex items-center gap-3">
+        <span className="text-purple-400">⚔️</span>
+        <span>First to reduce opponent's HP to 0 wins</span>
+      </p>
+    </div>
+  </motion.div>
+);
 
-  useEffect(() => {
-    if (hitInfo && hitInfo !== hitInfoRef.current) {
-      hitInfoRef.current = hitInfo;
+// Update TournamentStatus component to be responsive
+const TournamentStatus = ({
+  stats,
+  battleState,
+  toggleBGM,
+  currentMatches,
+}) => {
+  const [isMuted, setIsMuted] = useState(true);
 
-      // Only show attack animation if this NFT is the attacker
-      if (hitInfo.attacker.mint === nft.mint) {
-        console.log(`${nft.name} is attacking!`);
-        setIsAttacking(true);
-        setTimeout(() => setIsAttacking(false), 1000);
-      }
-
-      // Only show hit animation if this NFT is the target AND health decreased
-      if (
-        hitInfo.target.mint === nft.mint &&
-        hitInfo.target.health < prevHealth.current
-      ) {
-        console.log(
-          `${nft.name} was hit! Health: ${prevHealth.current} -> ${hitInfo.target.health}`
-        );
-        setWasHit(true);
-        setTimeout(() => setWasHit(false), 1000);
-      }
-
-      // Update previous health reference
-      prevHealth.current = nft.health;
-    }
-  }, [hitInfo, nft.health, nft.mint, nft.name]);
+  const handleToggleAudio = () => {
+    setIsMuted(!isMuted);
+    toggleBGM(!isMuted);
+  };
 
   return (
     <motion.div
-      className="bg-gray-900/70 backdrop-blur-md p-6 rounded-lg shadow-xl relative border border-gray-800"
-      animate={
-        wasHit
-          ? {
-              x: [-20, 20, -15, 15, -10, 10, -5, 5, 0],
-              rotate: [-2, 2, -1.5, 1.5, -1, 1, -0.5, 0.5, 0],
-            }
-          : isAttacking
-          ? {
-              scale: [1, 1.1, 1],
-              transition: { duration: 0.5 },
-            }
-          : {
-              scale: [1, 1.02, 1],
-              transition: { duration: 1.5, repeat: Infinity },
-            }
-      }
-      transition={{ duration: 0.5 }}
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      className="p-3 sm:p-4 md:p-6 rounded-lg border border-gray-700 bg-black/80 backdrop-blur-sm
+                 h-auto w-full"
     >
-      {/* Sword Attack Animation */}
-      <AnimatePresence>
-        {isAttacking && (
-          <motion.div
-            initial={{ opacity: 0, x: 0 }}
-            animate={{ opacity: 1, x: 100 }}
-            exit={{ opacity: 0 }}
-            className="absolute z-10 left-full top-1/2 -translate-y-1/2"
-          >
-            <span className="text-4xl">⚔️</span>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Hit Effect Flash */}
-      <AnimatePresence>
-        {wasHit && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-red-500 mix-blend-overlay rounded-lg"
-          />
-        )}
-      </AnimatePresence>
-
-      {/* Battle Aura */}
-      <motion.div
-        className="absolute -inset-2 bg-gradient-to-r from-purple-900/30 to-red-900/30 rounded-lg blur-xl"
-        animate={{
-          opacity: [0.2, 0.4, 0.2],
-          scale: [0.95, 1.05, 0.95],
-        }}
-        transition={{ duration: 2, repeat: Infinity }}
-      />
-
-      <div className="relative">
-        {!imageLoaded && (
-          <motion.div
-            className="absolute inset-0 bg-gray-900 rounded-lg flex items-center justify-center"
-            animate={{ opacity: [0.3, 0.5, 0.3] }}
-            transition={{ duration: 1, repeat: Infinity }}
-          >
-            <span className="text-4xl">⚔️</span>
-          </motion.div>
-        )}
-        <img
-          src={nft.image}
-          alt={nft.name}
-          className={`w-64 h-64 object-cover rounded-lg shadow-lg transition-opacity duration-300 ${
-            imageLoaded ? "opacity-100" : "opacity-0"
-          }`}
-          onLoad={() => setImageLoaded(true)}
-          loading="eager"
-        />
-
-        {/* Power Particles */}
-        <motion.div
-          className="absolute inset-0 pointer-events-none"
-          animate={{ opacity: [0, 1, 0] }}
-          transition={{ duration: 2, repeat: Infinity }}
-        >
-          {[...Array(10)].map((_, i) => (
-            <motion.div
-              key={i}
-              className="absolute w-2 h-2 bg-blue-500 rounded-full"
-              animate={{
-                y: [-10, -50],
-                x: Math.random() * 20 - 10,
-                opacity: [0, 1, 0],
-                scale: [0, 1, 0],
-              }}
-              transition={{
-                duration: 2,
-                repeat: Infinity,
-                delay: i * 0.2,
-              }}
-              style={{
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-              }}
-            />
-          ))}
-        </motion.div>
-
-        {/* Health Bar */}
-        <div className="absolute -bottom-4 left-1/2 transform -translate-x-1/2 w-4/5">
-          <motion.div
-            className="h-3 bg-gray-700 rounded-full overflow-hidden"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            <motion.div
-              className="h-full bg-gradient-to-r from-red-500 to-red-600"
-              initial={{ width: "100%" }}
-              animate={{ width: `${(nft.health / 2) * 100}%` }}
-              transition={{ type: "spring", stiffness: 100 }}
-            />
-          </motion.div>
+      <h3 className="text-base lg:text-lg font-bold text-gray-200 mb-3 lg:mb-4">
+        🏆 Tournament Status
+      </h3>
+      <div className="space-y-2 lg:space-y-3 text-xs lg:text-sm text-gray-300">
+        {/* Round Info */}
+        <div className="flex justify-between items-center">
+          <span>Current Round</span>
+          <span className="text-purple-400 font-mono">
+            {stats?.currentRound || 0}/{stats?.totalRounds || 0}
+          </span>
         </div>
 
-        {/* Hit Indicator - Only show when this NFT is hit */}
-        <AnimatePresence mode="wait">
-          {wasHit && (
-            <motion.div
-              key="hit-indicator"
-              initial={{ opacity: 0, y: 0, scale: 0.5 }}
-              animate={{ opacity: 1, y: -50, scale: 1.5 }}
-              exit={{ opacity: 0, y: -100, scale: 0.5 }}
-              className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-red-500 font-bold text-4xl"
-            >
-              -1 HP!
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {/* Current Featured Match Info */}
+        <div className="border-t border-gray-800 my-4" />
+        <div className="text-xs">
+          <div className="text-gray-500 mb-2">Featured Battle</div>
+          <div className="font-medium text-purple-400">
+            {battleState.nft1?.name || "---"}
+            <span className="text-gray-600 mx-2">vs</span>
+            {battleState.nft2?.name || "---"}
+          </div>
+        </div>
+
+        {/* Audio Controls */}
+        <div className="border-t border-gray-800 mt-4 pt-4">
+          <motion.button
+            onClick={handleToggleAudio}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg 
+                     bg-purple-600/20 hover:bg-purple-600/30 
+                     border border-purple-500/30 w-full
+                     transition-colors duration-200"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <span className="text-lg">{isMuted ? "🔇" : "🔊"}</span>
+            <span className="text-xs text-purple-300">
+              {isMuted ? "Enable Sound" : "Disable Sound"}
+            </span>
+          </motion.button>
+        </div>
       </div>
-
-      {/* Name and Stats */}
-      <motion.div
-        className="mt-6 text-center"
-        animate={wasHit ? { y: [0, -5, 0] } : {}}
-      >
-        <h3 className="text-xl font-bold truncate">{nft.name}</h3>
-        <div className="mt-2 flex justify-center items-center gap-2">
-          <motion.span
-            className="text-red-500"
-            animate={wasHit ? { scale: [1, 1.5, 1] } : {}}
-          >
-            ❤️
-          </motion.span>
-          <motion.span
-            className="font-mono"
-            animate={wasHit ? { scale: [1, 1.2, 1] } : {}}
-          >
-            {nft.health}/2
-          </motion.span>
-        </div>
-      </motion.div>
-
-      {/* VS Lightning Effect */}
-      <motion.div
-        className="absolute top-1/2 right-0 transform translate-x-full -translate-y-1/2"
-        animate={{
-          opacity: [0, 1, 0],
-          scale: [0.8, 1.2, 0.8],
-        }}
-        transition={{ duration: 1.5, repeat: Infinity }}
-      >
-        <div className="text-4xl text-yellow-400">⚡</div>
-      </motion.div>
     </motion.div>
   );
 };
 
-const NFTPlaceholder = () => (
-  <div className="w-full h-40 bg-gray-700 rounded-md animate-pulse flex items-center justify-center">
-    <img
-      src="/favicon3.png"
-      alt="Placeholder"
-      className="w-12 h-12 opacity-50 mx-auto mb-2"
-    />
-  </div>
-);
-
-const NFTCard = ({ nft, isActive = false }) => (
-  <motion.div
-    initial={{ opacity: 0, scale: 0.8 }}
-    animate={{ opacity: 1, scale: 1 }}
-    exit={{ opacity: 0, scale: 0.8 }}
-    className="bg-gray-900/70 backdrop-blur-md p-3 rounded-lg shadow-md hover:shadow-xl transition-all border border-gray-800 hover:bg-gray-900/80"
-  >
-    <div className="relative">
-      <div className="w-full h-40 bg-gray-800/50 rounded-md flex items-center justify-center">
-        <div className="text-center">
-          <img
-            src="/favicon3.png"
-            alt="Placeholder"
-            className="w-12 h-12 opacity-40 mx-auto mb-2 filter drop-shadow-lg"
-          />
-          <span className="text-gray-400 text-sm">#{nft.mint?.slice(-4)}</span>
-        </div>
-      </div>
-      <div className="absolute top-2 right-2 bg-black/70 backdrop-blur-sm rounded-full px-2 py-1">
-        <span className="text-xs">❤️ {nft.health}</span>
-      </div>
-    </div>
-    <div className="mt-2">
-      <h3 className="text-sm font-medium truncate text-gray-300">{nft.name}</h3>
-      <div className="text-xs text-gray-500 mt-1">
-        #{nft.mint ? nft.mint.slice(-4) : "N/A"}
-      </div>
-    </div>
-  </motion.div>
-);
-
-const WinnerDisplay = ({ winner }) => (
-  <motion.div
-    initial={{ opacity: 0, scale: 0.9 }}
-    animate={{ opacity: 1, scale: 1 }}
-    className="text-center mt-8"
-  >
-    <motion.h2
-      className="text-4xl font-bold mb-6"
-      animate={{ scale: [1, 1.1, 1] }}
-      transition={{ duration: 1.5, repeat: Infinity }}
-    >
-      🏆 Tournament Winner! 🏆
-    </motion.h2>
+// Update TournamentProgress to include debug info
+const TournamentProgress = ({ stats }) => {
+  return (
     <motion.div
-      className="bg-gray-800 p-8 rounded-lg inline-block shadow-2xl"
-      animate={{
-        boxShadow: [
-          "0 0 20px rgba(255,255,255,0.1)",
-          "0 0 40px rgba(255,255,255,0.2)",
-          "0 0 20px rgba(255,255,255,0.1)",
-        ],
-      }}
-      transition={{ duration: 2, repeat: Infinity }}
-    >
-      <img
-        src={winner.image}
-        alt={winner.name}
-        className="w-96 h-96 object-cover rounded-lg shadow-lg"
-      />
-      <h3 className="text-3xl font-bold mt-6">{winner.name}</h3>
-      <div className="text-gray-400 mt-2">
-        #{winner.mint ? winner.mint.slice(-4) : "N/A"}
-      </div>
-    </motion.div>
-  </motion.div>
-);
-
-const CoinFlip = ({ winner, loser }) => (
-  <motion.div
-    initial={{ opacity: 0, scale: 0 }}
-    animate={{ opacity: 1, scale: 1 }}
-    exit={{ opacity: 0, scale: 0 }}
-    className="bg-black bg-opacity-90 p-8 rounded-lg text-center"
-  >
-    <motion.div
-      animate={{ rotateY: 1080 }}
-      transition={{ duration: 2 }}
-      className="text-6xl mb-4"
-    >
-      🎲
-    </motion.div>
-    <motion.h3
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 1.5 }}
-      className="text-2xl font-bold text-yellow-400"
+      className="fixed bottom-6  md:left-1/2 transform -translate-x-1/2 
+                 bg-gray-900/90 backdrop-blur-sm p-4 rounded-xl border border-gray-800
+                 text-white shadow-lg z-50"
     >
-      {winner.name} strikes first!
-    </motion.h3>
-  </motion.div>
-);
+      <div className="text-center space-y-3">
+        <div className="text-sm text-gray-400">
+          Round {stats.currentRound} of {stats.totalRounds}
+        </div>
+
+        {/* Progress bar */}
+        <div className="w-64 h-2 bg-gray-800 rounded-full overflow-hidden">
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${stats.roundProgress}%` }}
+            className="h-full bg-purple-500"
+            transition={{ duration: 0.5 }}
+          />
+        </div>
+
+        <div className="flex justify-between text-sm">
+          <div>
+            <span className="text-purple-400">{stats.matchesCompleted}</span>
+            <span className="text-gray-500">
+              {" "}
+              / {stats.totalMatchesInRound}
+            </span>
+            <span className="text-gray-400"> matches</span>
+          </div>
+          <div>
+            <span className="text-blue-400">{stats.playersLeft}</span>
+            <span className="text-gray-400"> players left</span>
+          </div>
+        </div>
+
+        {stats.roundProgress > 90 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-sm text-yellow-400"
+          >
+            Next round starting soon...
+          </motion.div>
+        )}
+      </div>
+    </motion.div>
+  );
+};
+
+// Update the DevControls component
 
 export default Tournament;
