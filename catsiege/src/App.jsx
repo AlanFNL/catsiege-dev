@@ -9,6 +9,7 @@ import Footer from "./Footer";
 
 import Tournament from "./components/Tournament";
 import Guess from "./components/Guess";
+import TournamentWinners from "./components/TournamentWinners";
 
 function App() {
   useEffect(() => {
@@ -35,7 +36,7 @@ function App() {
     <div className="overflow-x-hidden">
       <Hero />
       <div id="tournament">
-        <Tournament />
+        <TournamentWinners />
       </div>
       <div id="whitelist">
         <Whitelist />
