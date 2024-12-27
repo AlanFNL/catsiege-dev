@@ -6,8 +6,6 @@ const { Server } = require('socket.io');
 const cors = require('cors');
 const axios = require('axios');
 const Tournament = require('./tournamentSchema');
-const cron = require('node-cron');
-const moment = require('moment-timezone');
 
 const app = express();
 const server = http.createServer(app);
@@ -741,73 +739,83 @@ async function emitFeaturedBattle(battle) {
   }
 }
 
-// Schedule tournament at 19:00 Argentina time (UTC-3)
-// Format: minute hour day month day-of-week
-cron.schedule('0 19 * * *', async () => {
+// Add this new endpoint
+app.get('/api/last-tournament-winners', async (req, res) => {
   try {
-    console.log('Cron job triggered:', moment().tz('America/Argentina/Buenos_Aires').format());
-    
-    // Check if there's already a tournament running
-    const existingTournament = await Tournament.findOne({ isRunning: true });
-    if (existingTournament) {
-      console.log('Tournament already in progress, skipping scheduled start');
-      return;
+    // Find the most recently completed tournament
+    const lastTournament = await Tournament.findOne(
+      { completedAt: { $exists: true } },
+      {},
+      { sort: { completedAt: -1 } }
+    );
+
+    if (!lastTournament) {
+      return res.status(404).json({ message: 'No completed tournaments found' });
     }
 
-    // Check for completed tournaments today
-    const startOfDay = moment().tz('America/Argentina/Buenos_Aires').startOf('day');
-    const endOfDay = moment().tz('America/Argentina/Buenos_Aires').endOf('day');
+    // Get all brackets from the tournament
+    const allBrackets = lastTournament.brackets;
     
-    const todaysTournament = await Tournament.findOne({
-      startedAt: {
-        $gte: startOfDay.toDate(),
-        $lte: endOfDay.toDate()
-      }
+    // Get the final brackets (last 3 rounds typically contain top 8)
+    const lastThreeRounds = allBrackets.slice(-3);
+    
+    // Collect unique NFTs from these rounds
+    const uniqueNFTs = new Map();
+    
+    // Process brackets from latest to earliest to get final positions
+    lastThreeRounds.reverse().forEach((bracket, roundIndex) => {
+      bracket.forEach((nft, position) => {
+        if (!uniqueNFTs.has(nft.id)) {
+          uniqueNFTs.set(nft.id, {
+            ...nft,
+            finalRound: lastThreeRounds.length - roundIndex,
+            position: position + 1
+          });
+        }
+      });
     });
 
-    if (todaysTournament) {
-      console.log('Tournament already ran today, skipping scheduled start');
-      return;
-    }
+    // Convert to array and sort by round and position
+    const top8 = Array.from(uniqueNFTs.values())
+      .sort((a, b) => {
+        if (b.finalRound !== a.finalRound) {
+          return b.finalRound - a.finalRound;
+        }
+        return a.position - b.position;
+      })
+      .slice(0, 8)
+      .map((nft, index) => ({
+        rank: index + 1,
+        name: nft.name,
+        image: nft.image,
+        mint: nft.mint,
+        wins: nft.wins || 0,
+        losses: nft.losses || 0
+      }));
 
-    console.log('Starting scheduled tournament...');
-    
-    // Fetch NFTs and initialize tournament
-    const nfts = await fetchNFTsFromMagicEden();
-    if (!nfts || nfts.length < 2) {
-      throw new Error('Not enough NFTs fetched. Minimum 2 required.');
-    }
-
-    // Calculate round sizes based on actual NFT count
-    const roundSizes = calculateRoundSizes(nfts.length);
-
-    // Create new tournament in database
-    const newTournament = new Tournament({
-      brackets: [nfts.map(nft => ({ ...nft, health: 32, wins: 0, losses: 0 }))],
-      currentRound: 0,
-      isRunning: true,
-      roundSizes: roundSizes,
-      lastUpdate: Date.now(),
-      startedAt: Date.now()
+    // Log formatted data to console
+    console.log('\nTop 8 Tournament Winners:');
+    console.log('=======================\n');
+    top8.forEach(winner => {
+      console.log(`Rank #${winner.rank}`);
+      console.log(`Name: ${winner.name}`);
+      console.log(`Image: ${winner.image}`);
+      console.log(`Mint: ${winner.mint}`);
+      console.log(`Record: ${winner.wins}W - ${winner.losses}L`);
+      console.log('------------------------\n');
     });
 
-    await newTournament.save();
-    
-    tournamentState = {
-      ...newTournament.toObject(),
-      completedMatches: new Set()
-    };
-    
-    console.log('Scheduled tournament created, starting matches...');
-    io.emit('tournamentState', tournamentState);
-    runTournament();
+    // Also provide the data as JSON
+    res.json({
+      tournamentId: lastTournament._id,
+      completedAt: lastTournament.completedAt,
+      winners: top8
+    });
 
   } catch (error) {
-    console.error('Error in scheduled tournament start:', error);
+    console.error('Error fetching tournament winners:', error);
+    res.status(500).json({ message: 'Error fetching tournament winners' });
   }
-}, {
-  scheduled: true,
-  timezone: "America/Argentina/Buenos_Aires"
 });
 
 const PORT = process.env.PORT || 3001;
