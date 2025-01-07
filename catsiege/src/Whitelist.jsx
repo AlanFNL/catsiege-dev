@@ -11,6 +11,8 @@ import circleArrow from "./assets/circlearrow.png";
 import Third from "./assets/3.webp";
 import White from "./assets/whitelist.webp";
 import White2 from "./assets/white.webp";
+import roadmapmob from "./assets/roadmap-mob.webp";
+import roadmap from "./assets/roadmap.webp";
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
@@ -197,183 +199,15 @@ function Whitelist() {
           </motion.div>
         </motion.div>
 
-        {/* Whitelist Form */}
-        <motion.div
-          className="mt-16 sm:mt-24 lg:mt-32"
-          initial={{ opacity: 0, filter: "blur(4px)" }}
-          whileInView={{ opacity: 1, filter: "blur(0px)" }}
-          transition={{ duration: 0.5 }}
-          viewport={{ once: false }}
-        >
-          <div
-            className="bg-opacity-10 backdrop-blur-md p-6 rounded-lg max-w-md mx-auto w-full relative"
-            style={{
-              backgroundImage: `url(${White})`,
-              backgroundSize: "cover",
-            }}
-          >
-            <motion.h2
-              className="text-base sm:text-lg text-center mb-2 text-black"
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              transition={{ delay: 0.2 }}
-            ></motion.h2>
-            <motion.h3
-              className="text-2xl sm:text-3xl font-bold text-center mb-4 sm:mb-6 text-black"
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              transition={{ delay: 0.4 }}
-            >
-              Whitelist
-            </motion.h3>
-            {!submitted ? (
-              <motion.form
-                className="flex flex-col relative z-10"
-                initial={{ opacity: 0 }}
-                whileInView={{ opacity: 1 }}
-                transition={{ delay: 0.6 }}
-                onSubmit={handleSubmit}
-              >
-                <div className="flex mb-2">
-                  <input
-                    type="email"
-                    placeholder="Enter your email"
-                    className="flex-grow bg-black text-white bg-opacity-20 border border-black border-opacity-50 rounded-l-md px-4 py-2 focus:outline-none focus:border-opacity-100"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                  <button
-                    type="submit"
-                    className="bg-gray-800 px-4 py-2 rounded-r-md hover:bg-gray-700 transition-colors relative"
-                    style={{ color: "rgba(255, 245, 228, 1)" }}
-                    disabled={isLoading}
-                  >
-                    {isLoading ? <div className="spinner"></div> : "SEND"}
-                  </button>
-                </div>
-                {error && <p className="text-red-500 text-sm">{error}</p>}
-              </motion.form>
-            ) : (
-              <motion.p
-                className="text-black text-center"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-              >
-                Thank you for joining the whitelist!
-              </motion.p>
-            )}
-          </div>
-        </motion.div>
+        {/* Roadmap Image */}
+        <div className="items-center justify-center sm:flex hidden">
+          <img src={roadmap} alt="" />
+        </div>
 
-        {/* Coming Soon Section */}
-        <motion.div
-          className="mt-8 backdrop-blur-md bg-black bg-opacity-50 rounded-lg overflow-hidden"
-          variants={fadeInUp}
-        >
-          <div className="border-t border-white border-opacity-20">
-            <div className="p-4">
-              <motion.h4
-                className="text-xl sm:text-2xl font-bold mb-4"
-                variants={fadeInUp}
-              >
-                <TypewriterText text="Coming soon" />
-              </motion.h4>
-              {["DIGITAL COLLECTIBLES", "Tournament"].map((item, index) => (
-                <motion.div
-                  key={item}
-                  className={`py-4 ${
-                    index === 0 ? "border-b border-white border-opacity-20" : ""
-                  }`}
-                  variants={fadeInUp}
-                >
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="font-bold">{item}</span>
-                    <span className="font-bold">??-??-202?</span>
-                  </div>
-                  <div className="flex justify-end"></div>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Roadmap Section */}
-        <motion.div
-          className="mt-16 relative pb-96 md:pb-0"
-          variants={staggerChildren}
-        >
-          <motion.div className="mb-8" variants={fadeInUp}>
-            <motion.div
-              ref={arrowRef}
-              className="relative w-32 h-32 lg:w-48 lg:h-48"
-              style={{
-                rotate: rotate2,
-              }}
-            >
-              <img
-                src={circleArrow}
-                alt="Circular arrow"
-                className="w-full h-full object-contain"
-              />
-            </motion.div>
-          </motion.div>
-
-          <div className="relative">
-            {/* Danger Ribbons */}
-            <motion.div
-              className="absolute -top-4 left-0 w-full overflow-hidden h-16 z-10"
-              variants={ribbonVariants}
-              initial="initial"
-              animate="animate"
-            >
-              <div className="absolute top-8 left-0 w-full h-8 bg-yellow-400 text-black font-bold text-lg transform -rotate-3 flex items-center justify-center">
-                ROADMAP COMING SOON
-              </div>
-            </motion.div>
-            <motion.div
-              className="absolute -bottom-4 left-0 w-full overflow-hidden h-16 z-10"
-              variants={ribbonVariants}
-              initial="initial"
-              animate="animate"
-            >
-              <div className="absolute bottom-8 left-0 w-full h-8 bg-yellow-400 text-black font-bold text-lg transform rotate-3 flex items-center justify-center">
-                ROADMAP COMING SOON
-              </div>
-            </motion.div>
-
-            {/* Blurred Content */}
-            <div className="filter blur-sm">
-              <TypewriterText
-                text="Roadmap"
-                className="text-3xl sm:text-4xl font-bold text-center mb-8"
-              />
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {[1, 2, 3, 4].map((item, index) => (
-                  <motion.div
-                    key={item}
-                    className="bg-opacity-90 backdrop-blur-md p-6 rounded-lg text-black"
-                    style={{ backgroundColor: "rgba(255, 245, 228, 0.97)" }}
-                    variants={itemVariants(index)}
-                    initial="hidden"
-                    whileInView="visible"
-                    viewport={{ once: false, margin: "-50px" }}
-                  >
-                    <h3 className="text-sm mb-2">Informacion.detalle</h3>
-                    <h4 className="text-xl font-bold mb-4">Texto descp</h4>
-                    <p className="text-sm">
-                      Descripción de la tarjeta, Descripción de la tarjeta,
-                      Descripción de la tarjeta Descripción de la tarjeta,
-                      Descripción de la tarjeta Descripción de la tarjeta,
-                      Descripción de la tarjeta
-                    </p>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </motion.div>
+        {/* Roadmap Mobile Image */}
+        <div className="items-center justify-center sm:hidden flex">
+          <img src={roadmapmob} alt="" />
+        </div>
 
         {/* Bottom Image */}
         <div className="absolute bottom-0 left-0 right-0 z-0 pointer-events-none">
