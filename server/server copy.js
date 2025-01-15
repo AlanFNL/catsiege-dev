@@ -1,0 +1,398 @@
+require('dotenv').config();
+const mongoose = require('mongoose');
+const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
+const cors = require('cors');
+const axios = require('axios');
+
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: [
+      process.env.CLIENT_URL || "http://localhost:5173",
+      /\.ngrok-free\.app$/,
+      "http://localhost:5173"
+    ],
+    methods: ["GET", "POST"],
+    credentials: true
+  }
+});
+
+app.use(cors({
+  origin: [
+    process.env.CLIENT_URL || "http://localhost:5173",
+    /\.ngrok-free\.app$/,
+    "http://localhost:5173"
+  ],
+  credentials: true
+}));
+app.use(express.json());
+
+// MongoDB Connection
+mongoose.connect(process.env.MONGODB_URI)
+  .then(() => console.log('Connected to MongoDB'))
+  .catch(err => console.error('MongoDB connection error:', err));
+
+// Tournament Schema
+const tournamentSchema = new mongoose.Schema({
+  currentRound: Number,
+  brackets: Array,
+  currentMatch: Object,
+  winners: Array,
+  isRunning: Boolean,
+  roundSizes: Array,
+  lastUpdate: Date,
+  startedAt: Date,
+  completedAt: Date
+});
+
+const Tournament = mongoose.model('Tournament', tournamentSchema);
+
+// Modified tournament state initialization
+let tournamentState = {
+  currentRound: 0,
+  brackets: [],
+  currentMatch: null,
+  winners: [],
+  isRunning: false,
+  roundSizes: [512, 256, 128, 64, 32, 16, 8, 4, 2, 1],
+  lastUpdate: Date.now()
+};
+
+// Modified Socket.IO connection handling
+io.on('connection', async (socket) => {
+  console.log('Client connected');
+
+  try {
+    // First check for ongoing tournament
+    const ongoingTournament = await Tournament.findOne({ isRunning: true });
+    if (ongoingTournament) {
+      console.log('Found ongoing tournament:', ongoingTournament._id);
+      tournamentState = ongoingTournament.toObject();
+      socket.emit('tournamentState', tournamentState);
+    } else {
+      // If no ongoing tournament, check for most recent completed tournament
+      const lastCompletedTournament = await Tournament.findOne(
+        { completedAt: { $exists: true } },
+        {},
+        { sort: { completedAt: -1 } }
+      );
+
+      if (lastCompletedTournament) {
+        console.log('Found completed tournament:', lastCompletedTournament._id);
+        socket.emit('tournamentState', {
+          ...lastCompletedTournament.toObject(),
+          isRunning: false
+        });
+      }
+    }
+  } catch (error) {
+    console.error('Error checking tournament status:', error);
+  }
+
+  socket.on('initializeTournament', async (data) => {
+    console.log('Initializing new tournament...');
+    try {
+      // Check if there's already a running tournament
+      const existingTournament = await Tournament.findOne({ isRunning: true });
+      if (existingTournament) {
+        console.log('Tournament already in progress');
+        socket.emit('error', { message: 'A tournament is already in progress' });
+        return;
+      }
+
+      console.log('Fetching NFTs using Helius...');
+      const nfts = await fetchNFTsUsingHelius();
+      console.log(`Fetched ${nfts.length} NFTs`);
+      
+      if (!nfts || nfts.length < 512) {
+        throw new Error(`Not enough NFTs fetched (got ${nfts.length}, need 512)`);
+      }
+
+      // Shuffle and select 512 NFTs
+      const shuffledNFTs = nfts
+        .sort(() => Math.random() - 0.5)
+        .slice(0, 512);
+
+      // Create new tournament in database
+      const newTournament = new Tournament({
+        brackets: [shuffledNFTs],
+        currentRound: 0,
+        isRunning: true,
+        roundSizes: [512, 256, 128, 64, 32, 16, 8, 4, 2, 1],
+        lastUpdate: Date.now(),
+        startedAt: Date.now()
+      });
+
+      console.log('Saving new tournament...');
+      await newTournament.save();
+      tournamentState = newTournament.toObject();
+      
+      console.log('Tournament created, starting matches...');
+      io.emit('tournamentState', tournamentState);
+      runTournament();
+    } catch (error) {
+      console.error('Tournament initialization error:', error);
+      socket.emit('error', { message: 'Failed to initialize tournament: ' + error.message });
+    }
+  });
+
+  socket.on('disconnect', () => {
+    console.log('Client disconnected');
+  });
+});
+
+// Modified runTournament function
+async function runTournament() {
+  while (tournamentState.isRunning) {
+    const currentBracket = tournamentState.brackets[tournamentState.currentRound];
+    
+    if (currentBracket.length <= 1) {
+      console.log('Tournament complete! Winner:', currentBracket[0]);
+      
+      tournamentState.isRunning = false;
+      tournamentState.winners = currentBracket;
+      tournamentState.completedAt = Date.now();
+      
+      await Tournament.findByIdAndUpdate(tournamentState._id, {
+        isRunning: false,
+        winners: currentBracket,
+        completedAt: Date.now()
+      });
+
+      io.emit('tournamentState', {
+        ...tournamentState,
+        winners: currentBracket,
+        isRunning: false
+      });
+      
+      break;
+    }
+
+    const winners = [];
+    for (let i = 0; i < currentBracket.length; i += 2) {
+      if (i + 1 < currentBracket.length) {
+        tournamentState.currentMatch = {
+          nft1: currentBracket[i],
+          nft2: currentBracket[i + 1]
+        };
+        io.emit('tournamentState', tournamentState);
+
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        const winner = await simulateBattle(currentBracket[i], currentBracket[i + 1]);
+        winners.push({ ...winner, health: 2 });
+      } else {
+        winners.push({ ...currentBracket[i], health: 2 });
+      }
+    }
+
+    tournamentState = {
+      ...tournamentState,
+      currentRound: tournamentState.currentRound + 1,
+      brackets: [...tournamentState.brackets, winners],
+      lastUpdate: Date.now()
+    };
+
+    await Tournament.findByIdAndUpdate(tournamentState._id, {
+      currentRound: tournamentState.currentRound,
+      brackets: tournamentState.brackets,
+      lastUpdate: Date.now()
+    });
+
+    io.emit('tournamentState', tournamentState);
+    await new Promise(resolve => setTimeout(resolve, 3000));
+  }
+}
+
+// Battle simulation function
+function simulateBattle(nft1, nft2) {
+  return new Promise(resolve => {
+    const battle = setInterval(() => {
+      const damage = Math.random() > 0.5 ? 1 : 0;
+      const target = Math.random() > 0.5 ? nft1 : nft2;
+      target.health -= damage;
+
+      if (target.health <= 0) {
+        clearInterval(battle);
+        resolve(target === nft1 ? nft2 : nft1);
+      }
+
+      io.emit('battleUpdate', { nft1, nft2 });
+    }, 1000);
+  });
+}
+
+// Function to fetch NFTs from Magic Eden
+async function fetchNFTsFromMagicEden() {
+  try {
+    const batchSize = 100; // Magic Eden's limit per request
+    const requiredNFTs = 512;
+    const batches = Math.ceil(requiredNFTs / batchSize);
+    let allNFTs = [];
+
+    console.log(`Fetching ${batches} batches of NFTs...`);
+
+    // Make multiple requests in parallel
+    const requests = Array.from({ length: batches }, (_, i) => 
+      axios.get('https://api-mainnet.magiceden.dev/v2/collections/froganas/listings', {
+        params: {
+          limit: batchSize,
+          offset: i * batchSize
+        },
+        headers: {
+          'Accept': 'application/json'
+        }
+      })
+    );
+
+    const responses = await Promise.all(requests);
+    
+    // Combine all NFTs from responses
+    responses.forEach(response => {
+      const validNFTs = response.data
+        .filter(listing => listing.token && listing.token.image)
+        .map((listing, index) => ({
+          id: allNFTs.length + index, // Ensure unique IDs
+          name: listing.token.name,
+          image: listing.token.image,
+          mint: listing.token.mint,
+          health: 2,
+          wins: 0,
+          losses: 0
+        }));
+      
+      allNFTs = [...allNFTs, ...validNFTs];
+    });
+
+    console.log(`Fetched ${allNFTs.length} total NFTs before shuffling`);
+
+    if (allNFTs.length < requiredNFTs) {
+      throw new Error(`Only found ${allNFTs.length} valid NFTs, need ${requiredNFTs}`);
+    }
+
+    // Shuffle and select required number of NFTs
+    const shuffledNFTs = allNFTs
+      .sort(() => Math.random() - 0.5)
+      .slice(0, requiredNFTs);
+
+    console.log(`Successfully prepared ${shuffledNFTs.length} NFTs for tournament`);
+    return shuffledNFTs;
+
+  } catch (error) {
+    console.error('Error fetching NFTs:', error);
+    throw new Error(`Failed to fetch NFTs: ${error.message}`);
+  }
+}
+
+// Add rate limiting to avoid API issues
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// Optional: Add retry logic for failed requests
+async function fetchWithRetry(url, config, retries = 3) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const response = await axios.get(url, config);
+      return response;
+    } catch (error) {
+      if (i === retries - 1) throw error;
+      await delay(1000 * (i + 1)); // Exponential backoff
+    }
+  }
+}
+
+async function fetchNFTsUsingHelius() {
+  try {
+    const HELIUS_API_KEY = process.env.HELIUS_API_KEY;
+    if (!HELIUS_API_KEY) {
+      throw new Error('HELIUS_API_KEY not found in environment variables');
+    }
+
+    const endpoint = `https://api.helius.xyz/v0/token-metadata?api-key=${HELIUS_API_KEY}`;
+    const requiredNFTs = 512;
+    const collectionAddress = 'C7on9fL8YFp5W6M7a6SvehMKBppauZXu2eYDTZG4BN2i';
+    
+    console.log('Querying Helius API for collection:', collectionAddress);
+    
+    // First request to get total count
+    const initialResponse = await axios.post(endpoint, {
+      query: {
+        collection: collectionAddress
+      },
+      options: {
+        limit: 1
+      }
+    });
+
+    const totalNFTs = initialResponse.data.result.length;
+    console.log(`Collection has approximately ${totalNFTs} total NFTs`);
+
+    // Now fetch enough to ensure we get 512 valid ones
+    const response = await axios.post(endpoint, {
+      query: {
+        collection: collectionAddress
+      },
+      options: {
+        limit: Math.max(1000, requiredNFTs * 1.2)
+      }
+    });
+
+    if (!response.data || !response.data.result) {
+      throw new Error('Invalid response from Helius API');
+    }
+
+    console.log(`Raw NFT count from Helius: ${response.data.result.length}`);
+
+    const validNFTs = response.data.result
+      .filter(nft => {
+        const hasUri = nft.onChainMetadata?.metadata?.data?.uri;
+        const hasName = nft.onChainMetadata?.metadata?.data?.name;
+        return hasUri && hasName;
+      })
+      .map((nft, index) => {
+        if (index === 0) {
+          console.log('Sample NFT metadata:', nft);
+        }
+
+        return {
+          id: index,
+          name: nft.onChainMetadata.metadata.data.name,
+          image: nft.onChainMetadata.metadata.data.uri,
+          mint: nft.mint,
+          health: 2,
+          wins: 0,
+          losses: 0
+        };
+      });
+
+    console.log(`Found ${validNFTs.length} valid NFTs before shuffling`);
+
+    if (validNFTs.length < requiredNFTs) {
+      throw new Error(`Not enough valid NFTs (got ${validNFTs.length}, need ${requiredNFTs})`);
+    }
+
+    // Shuffle and select exactly 512 NFTs
+    const shuffledNFTs = validNFTs
+      .sort(() => Math.random() - 0.5)
+      .slice(0, requiredNFTs);
+
+    console.log(`Successfully prepared ${shuffledNFTs.length} NFTs for tournament`);
+    return shuffledNFTs;
+
+  } catch (error) {
+    console.error('Error fetching NFTs using Helius:', error);
+    if (error.response) {
+      console.error('API Response:', error.response.data);
+    }
+    throw new Error(`Helius API error: ${error.message}`);
+  }
+}
+
+const PORT = process.env.PORT || 3001;
+server.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
