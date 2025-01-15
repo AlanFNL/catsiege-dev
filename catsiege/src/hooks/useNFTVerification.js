@@ -18,7 +18,7 @@ export function useNFTVerification() {
         throw new Error('No authentication token found');
       }
 
-      const response = await fetch('/api/user/quests/nft-holder', {
+      const response = await fetch('https://catsiege-dev.onrender.com/api/user/quests/nft-holder', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
