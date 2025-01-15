@@ -10,7 +10,7 @@ router.get('/me', isAuthenticated, async (req, res) => {
     console.log('Fetching complete user data for ID:', req.userId);
     
     const user = await User.findById(req.userId)
-      .select('-password') // Exclude password
+      .select('-password')
       .lean();
     
     if (!user) {
@@ -18,18 +18,21 @@ router.get('/me', isAuthenticated, async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Log the complete user data
-    console.log('Complete user data:', {
+    // Explicitly map the user data we want to send to frontend
+    const mappedUserData = {
       id: user._id,
       email: user.email,
-      quests: user.quests,
-      walletAddress: user.walletAddress,
-      completedQuests: user.completedQuests,
-      points: user.points
-    });
+      walletAddress: user.walletAddress || null,
+      points: user.points || 0,
+      quests: {
+        nftVerified: user.quests?.nftVerified || false,
+        nftHolder: user.quests?.nftHolder || false
+      },
+      completedQuests: user.completedQuests || []
+    };
     
-    // Return the complete user object
-    res.json(user);
+    console.log('Mapped user data for frontend:', mappedUserData);
+    res.json(mappedUserData);
   } catch (error) {
     console.error('Error fetching user data:', error);
     res.status(500).json({ message: 'Error fetching user data' });
@@ -101,15 +104,14 @@ router.get('/nft-status', isAuthenticated, async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    console.log('NFT status:', {
-      nftVerified: user.quests?.nftVerified,
-      walletAddress: user.walletAddress
-    });
-    
-    res.json({
+    // Explicitly map the NFT status data
+    const nftStatus = {
       nftVerified: user.quests?.nftVerified || false,
-      walletAddress: user.walletAddress
-    });
+      walletAddress: user.walletAddress || null
+    };
+
+    console.log('NFT status:', nftStatus);
+    res.json(nftStatus);
   } catch (error) {
     console.error('Error checking NFT status:', error);
     res.status(500).json({ message: 'Error checking NFT status' });
