@@ -88,6 +88,10 @@ router.post('/register', async (req, res) => {
       points: 0,
       completedQuests: [{
 
+      }],
+      walletAddress: null,
+      quests: [{
+        nftVerified: false
       }]
     });
 
