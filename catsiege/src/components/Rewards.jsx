@@ -31,20 +31,34 @@ export default function Rewards({ isOpen, onClose }) {
   const [claimingQuest, setClaimingQuest] = useState(null);
 
   const getQuestStatus = (quest) => {
+    // Special handling for NFT holder quest
+    if (quest.id === "NFT_HOLDER") {
+      if (!connected) {
+        return "connect_wallet";
+      }
+      if (isQuestCompleted(quest.id)) {
+        return "completed";
+      }
+      if (user?.quests?.nftVerified) {
+        return "claimable";
+      }
+      return "locked";
+    }
+
+    // Regular quest handling
     if (quest.type !== "daily") {
       return isQuestCompleted(quest.id)
         ? "completed"
-        : canClaimQuest(quest.id, { hasNFT, isWalletConnected: connected })
+        : canClaimQuest(quest.id)
         ? "claimable"
         : "locked";
     }
 
+    // Daily quest handling
     const questData = completedQuests.find((q) => q.questId === quest.id);
     if (!questData) return "claimable";
-
     if (canClaimQuest(quest.id)) return "claimable";
 
-    // Calculate time remaining
     const nextAvailable = new Date(questData.nextAvailable);
     const now = new Date();
     const hoursRemaining = Math.max(
@@ -84,7 +98,7 @@ export default function Rewards({ isOpen, onClose }) {
 
     // Special handling for NFT holder quest
     if (quest.id === "NFT_HOLDER") {
-      if (!connected) {
+      if (status === "connect_wallet") {
         return (
           <button
             onClick={onClose} // Close rewards to show wallet modal
@@ -95,7 +109,7 @@ export default function Rewards({ isOpen, onClose }) {
         );
       }
 
-      if (isQuestCompleted(quest.id)) {
+      if (status === "completed") {
         return (
           <button
             className="w-full bg-green-500/20 text-green-500 py-2 rounded-lg flex items-center justify-center gap-2"
@@ -107,19 +121,39 @@ export default function Rewards({ isOpen, onClose }) {
         );
       }
 
-      if (!hasNFT) {
+      if (status === "claimable") {
         return (
           <button
-            className="w-full bg-gray-500/20 text-gray-400 py-2 rounded-lg flex items-center justify-center gap-2"
-            disabled
+            onClick={() => handleClaim(quest.id)}
+            disabled={isLoading}
+            className={`w-full bg-[#FFF5E4] text-black py-2 rounded-lg hover:bg-[#FFF5E4]/90 transition-colors flex items-center justify-center gap-2 ${
+              isLoading ? "opacity-75 cursor-not-allowed" : ""
+            }`}
           >
-            <Lock size={20} />
-            No eligible NFTs
+            {isLoading ? (
+              <>
+                <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                Claiming...
+              </>
+            ) : (
+              "Claim Reward"
+            )}
           </button>
         );
       }
+
+      return (
+        <button
+          className="w-full bg-gray-500/20 text-gray-400 py-2 rounded-lg flex items-center justify-center gap-2"
+          disabled
+        >
+          <Lock size={20} />
+          Verify NFT Ownership
+        </button>
+      );
     }
 
+    // Regular quest button rendering
     if (typeof status === "object" && status.status === "cooldown") {
       return (
         <button
