@@ -45,9 +45,10 @@ export const authService = {
       }
 
       const response = await api.get('/user/me');
+      console.log('Raw response from /me:', response.data);
       
       const userData = {
-        id: response.data.id,
+        id: response.data.id || response.data._id,
         email: response.data.email,
         walletAddress: response.data.walletAddress || null,
         points: response.data.points || 0,
@@ -55,7 +56,12 @@ export const authService = {
           nftVerified: response.data.quests?.nftVerified || false,
           nftHolder: response.data.quests?.nftHolder || false
         },
-        completedQuests: response.data.completedQuests || []
+        completedQuests: response.data.completedQuests?.map(quest => ({
+          questId: quest.questId,
+          completedAt: quest.completedAt,
+          lastClaim: quest.lastClaim,
+          _id: quest._id
+        })) || []
       };
 
       console.log('API: Mapped user data:', userData);
@@ -94,28 +100,25 @@ export const authService = {
 
   claimQuest: async (questId) => {
     try {
-      const token = localStorage.getItem('tokenCat');
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
+      const response = await api.post('/quests/claim', { questId });
+      
+      const mappedResponse = {
+        completedQuests: response.data.completedQuests?.map(quest => ({
+          questId: quest.questId,
+          completedAt: quest.completedAt,
+          lastClaim: quest.lastClaim,
+          _id: quest._id
+        })) || [],
+        totalPoints: response.data.totalPoints || 0,
+        pointsEarned: response.data.pointsEarned || 0,
+        quests: {
+          nftVerified: response.data.quests?.nftVerified || false,
+          nftHolder: response.data.quests?.nftHolder || false
+        }
+      };
 
-      const response = await fetch('/api/quests/claim', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ questId })
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to claim quest');
-      }
-
-      const data = await response.json();
-      console.log('Quest claim response:', data);
-      return data;
+      console.log('Quest claim mapped response:', mappedResponse);
+      return mappedResponse;
     } catch (error) {
       console.error('Error claiming quest:', error);
       throw error;
@@ -147,10 +150,16 @@ export const authService = {
   async getNFTStatus() {
     try {
       const response = await api.get('/user/nft-status');
-      return {
+      const nftStatus = {
         nftVerified: response.data.nftVerified || false,
-        walletAddress: response.data.walletAddress || null
+        walletAddress: response.data.walletAddress || null,
+        quests: {
+          nftVerified: response.data.quests?.nftVerified || false,
+          nftHolder: response.data.quests?.nftHolder || false
+        }
       };
+      console.log('NFT status response:', nftStatus);
+      return nftStatus;
     } catch (error) {
       console.error('Get NFT status error:', error);
       throw error.response?.data || { message: 'Network error' };
