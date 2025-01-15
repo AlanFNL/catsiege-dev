@@ -29,12 +29,12 @@ export function AuthProvider({ children }) {
         return;
       }
 
-      const { user } = await authService.me();
-      console.log("Auth check response user:", user);
+      const userData = await authService.me();
+      console.log("Auth check response userData:", userData);
 
-      if (user) {
-        setUser(user);
-        console.log("User set:", user);
+      if (userData) {
+        setUser(userData);
+        console.log("User set:", userData);
       }
     } catch (error) {
       console.error("Auth check failed:", error);
@@ -56,6 +56,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = async (userData) => {
+    console.log("Setting user data in login:", userData);
     setUser(userData);
   };
 
