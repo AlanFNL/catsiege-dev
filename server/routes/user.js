@@ -8,7 +8,9 @@ const router = express.Router();
 router.get('/me', isAuthenticated, async (req, res) => {
   try {
     console.log('Fetching user data for ID:', req.userId);
-    const user = await User.findById(req.userId).select('-password');
+    const user = await User.findById(req.userId)
+      .select('-password')
+      .lean();
     
     if (!user) {
       console.log('No user found');
@@ -18,10 +20,11 @@ router.get('/me', isAuthenticated, async (req, res) => {
     console.log('User found:', {
       id: user._id,
       quests: user.quests,
-      walletAddress: user.walletAddress
+      walletAddress: user.walletAddress,
+      completedQuests: user.completedQuests
     });
     
-    res.json({ user });
+    res.json(user);
   } catch (error) {
     console.error('Error fetching user:', error);
     res.status(500).json({ message: 'Error fetching user data' });

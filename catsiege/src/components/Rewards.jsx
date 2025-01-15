@@ -41,14 +41,14 @@ export default function Rewards({ isOpen, onClose }) {
       if (isQuestCompleted(quest.id)) {
         return "completed";
       }
-      // Access user.user.quests instead of user.quests
-      if (user?.user?.quests?.nftVerified === true) {
+      // Access user.quests directly now
+      if (user?.quests?.nftVerified === true) {
         console.log("NFT is verified, quest should be claimable");
         return "claimable";
       }
       console.log("NFT not verified, quest should be locked", {
-        userQuests: user?.user?.quests,
-        nftVerified: user?.user?.quests?.nftVerified,
+        userQuests: user?.quests,
+        nftVerified: user?.quests?.nftVerified,
       });
       return "locked";
     }
