@@ -45,7 +45,7 @@ export function useNFTVerification() {
       console.log('Quest status updated successfully:', data);
       
       // Force refresh user data
-      await fetch('/api/user/me', {
+      await fetch('https://catsiege-dev.onrender.com/api/user/me', {
         headers: {
           'Authorization': `Bearer ${token}`
         }

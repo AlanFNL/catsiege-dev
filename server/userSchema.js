@@ -48,6 +48,10 @@ const userSchema = new mongoose.Schema({
   updatedAt: {
     type: Date,
     default: Date.now,
+  },
+  quests: {
+    nftHolder: { type: Boolean, default: false },
+    nftVerified: { type: Boolean, default: false }
   }
 });
 

@@ -103,7 +103,11 @@ export function PointsProvider({ children }) {
     // Special handling for NFT holder quest
     if (questId === "NFT_HOLDER") {
       // Check if user has verified NFT ownership and hasn't claimed yet
-      return user?.quests?.nftHolder === true && !isQuestCompleted(questId);
+      return (
+        user?.quests?.nftVerified === true &&
+        user?.walletAddress &&
+        !isQuestCompleted(questId)
+      );
     }
 
     // One-time quests

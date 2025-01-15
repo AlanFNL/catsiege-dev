@@ -64,7 +64,7 @@ router.post('/quests/nft-holder', isAuthenticated, async (req, res) => {
       req.userId,
       { 
         $set: {
-          'quests.nftHolder': verified,
+          'quests.nftVerified': verified,
           walletAddress
         }
       },
