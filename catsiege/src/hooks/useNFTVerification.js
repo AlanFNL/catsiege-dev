@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { Connection, PublicKey } from '@solana/web3.js';
+import { Connection, PublicKey, clusterApiUrl } from '@solana/web3.js';
 import { getParsedNftAccountsByOwner } from '@nfteyez/sol-rayz';
 
 export function useNFTVerification() {
@@ -9,7 +9,7 @@ export function useNFTVerification() {
   const [hasNFT, setHasNFT] = useState(false);
 
   const COLLECTION_ADDRESS = new PublicKey("BP4ui7x9ZGCTqFVyuED2XAM1WXZkK2JvZvBMoa7SyqAD");
-  const CONNECTION = new Connection("https://api.devnet.solana.com");
+  const CONNECTION = new Connection(clusterApiUrl('mainnet-beta'));
 
   const verifyNFTOwnership = useCallback(async () => {
     if (!publicKey) {
@@ -21,7 +21,7 @@ export function useNFTVerification() {
     console.log("Verifying NFTs for wallet:", publicKey.toString());
 
     try {
-      // Get all NFTs for the connected wallet
+      // Get all NFTs for the connected wallet from mainnet
       const nfts = await getParsedNftAccountsByOwner({
         publicAddress: publicKey.toString(),
         connection: CONNECTION,

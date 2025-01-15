@@ -12,10 +12,10 @@ import { clusterApiUrl } from "@solana/web3.js";
 import "@solana/wallet-adapter-react-ui/styles.css";
 
 export function WalletContextProvider({ children }) {
-  // Use devnet for development
-  const network = WalletAdapterNetwork.Devnet;
+  // Use mainnet-beta instead of devnet
+  const network = WalletAdapterNetwork.Mainnet;
 
-  // Define the RPC endpoint
+  // Define the RPC endpoint for mainnet
   const endpoint = useMemo(() => clusterApiUrl(network), [network]);
 
   // Initialize wallet adapter
