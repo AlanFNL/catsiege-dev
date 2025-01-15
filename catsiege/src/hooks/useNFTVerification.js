@@ -18,7 +18,12 @@ export function useNFTVerification() {
         throw new Error('No authentication token found');
       }
 
-      const response = await fetch('https://catsiege-dev.onrender.com/api/user/quests/nft-holder', {
+      console.log('Updating quest status with:', {
+        verified: true,
+        walletAddress: publicKey.toString()
+      });
+
+      const response = await fetch('/api/user/quests/nft-holder', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -30,14 +35,26 @@ export function useNFTVerification() {
         })
       });
 
+      const data = await response.json();
+      
       if (!response.ok) {
-        throw new Error('Failed to update quest status');
+        console.error('Server response error:', data);
+        throw new Error(data.message || 'Failed to update quest status');
       }
 
-      const data = await response.json();
-      console.log('Quest status updated:', data);
+      console.log('Quest status updated successfully:', data);
+      
+      // Force refresh user data
+      await fetch('/api/user/me', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      return data;
     } catch (error) {
       console.error('Error updating quest status:', error);
+      throw error; // Re-throw to handle in the calling function
     }
   };
 
