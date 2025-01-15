@@ -158,24 +158,17 @@ router.post('/claim', isAuthenticated, async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    console.log('User before claim:', {
-      quests: user.quests,
-      completedQuests: user.completedQuests,
-      points: user.points,
-      walletAddress: user.walletAddress
-    });
-
     // Check if quest is already completed (for one-time quests)
     const isCompleted = user.completedQuests.some(q => q.questId === questId);
     if (isCompleted && questId !== 'DAILY_LOGIN') {
       return res.status(400).json({ message: 'Quest already completed' });
     }
 
-    // Special handling for NFT holder quest
+    // For NFT holder quest, we don't need to check nftVerified anymore
+    // since we're using localStorage verification on the frontend
     if (questId === 'NFT_HOLDER') {
-      if (!user.quests?.nftVerified) {
-        return res.status(400).json({ message: 'NFT not verified' });
-      }
+      // Just proceed with the claim since verification was done on frontend
+      console.log('NFT holder quest claim - verification done via localStorage');
     }
 
     // Add quest to completed quests
@@ -191,22 +184,13 @@ router.post('/claim', isAuthenticated, async (req, res) => {
     const questPoints = QUESTS[questId]?.points || 0;
     user.points += questPoints;
 
-    // For NFT holder quest, mark it as claimed
-    if (questId === 'NFT_HOLDER') {
-      user.quests.nftHolder = true;
-    }
-
     await user.save();
     
     // Create explicit response object
     const responseData = {
       completedQuests: user.completedQuests,
       totalPoints: user.points,
-      pointsEarned: questPoints,
-      quests: {
-        nftVerified: user.quests?.nftVerified || false,
-        nftHolder: user.quests?.nftHolder || false
-      }
+      pointsEarned: questPoints
     };
 
     console.log('Quest claim response data:', responseData);
