@@ -26,6 +26,9 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
+    console.log('Stored hashed password:', user.password);
+    console.log('Attempting to compare with provided password');
+    
     const isValidPassword = await bcrypt.compare(password, user.password);
     console.log('Password comparison result:', isValidPassword);
 
@@ -73,9 +76,13 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ message: 'Email already registered' });
     }
 
-    const salt = await bcrypt.genSalt(10);
+    const SALT_ROUNDS = 10;
+    const salt = await bcrypt.genSalt(SALT_ROUNDS);
     const hashedPassword = await bcrypt.hash(password, salt);
-    console.log('Password hashed successfully');
+    
+    console.log('Password hashing details:');
+    console.log('Salt rounds used:', SALT_ROUNDS);
+    console.log('Generated hash:', hashedPassword);
 
     const user = new User({
       email,
@@ -89,7 +96,7 @@ router.post('/register', async (req, res) => {
     });
 
     await user.save();
-    console.log('User saved successfully');
+    console.log('User saved successfully with hashed password');
 
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
       expiresIn: '30d'
