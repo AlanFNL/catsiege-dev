@@ -1,21 +1,7 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
-
-const questSchema = new mongoose.Schema({
-    questId: {
-      type: String,
-      required: true
-    },
-    completedAt: {
-      type: Date,
-      default: Date.now
-    },
-    lastClaim: {
-      type: Date,
-      default: Date.now
-    }
-  });
+const SALT_ROUNDS = 10
 
 const userSchema = new mongoose.Schema({
   email: {
@@ -65,18 +51,29 @@ const userSchema = new mongoose.Schema({
   }
 });
 
-// Pre-save middleware to hash password
-userSchema.pre('save', async function(next) {
-  if (this.isModified('password')) {
-    this.password = await bcrypt.hash(this.password, 10);
-  }
-  this.updatedAt = Date.now();
-  next();
+
+
+userSchema.pre('save', function(next) {
+  // Only hash the password if it has been modified (or is new)
+  if (!this.isModified('password')) return next();
+
+  // Generate a salt and hash the password
+  bcrypt.genSalt(SALT_ROUNDS, (err, salt) => {
+    if (err) return next(err);
+
+    bcrypt.hash(this.password, salt, (err, hash) => {
+      if (err) return next(err);
+
+      // Override the cleartext password with the hashed one
+      this.password = hash;
+      next();
+    });
+  });
 });
 
 // Method to check password
-userSchema.methods.comparePassword = async function(candidatePassword) {
-  return await bcrypt.compare(candidatePassword, this.password);
+userSchema.methods.comparePassword = function(candidatePassword) {
+  return bcrypt.compare(candidatePassword, this.password);
 };
 
 // Method to update daily login streak

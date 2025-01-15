@@ -35,7 +35,7 @@ router.post('/login', async (req, res) => {
     const storedSaltRounds = user.password.split('$')[2];
     console.log('Stored password salt rounds:', storedSaltRounds);
     
-    const isValidPassword = await bcrypt.compare(password, user.password);
+    const isValidPassword = await user.comparePassword(password);
     console.log('Password comparison result:', isValidPassword);
 
     if (!isValidPassword) {
@@ -76,23 +76,15 @@ router.post('/register', async (req, res) => {
   try {
     const { email, password } = req.body;
     console.log('Registration attempt for:', email);
-    console.log('Using salt rounds:', SALT_ROUNDS);
     
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: 'Email already registered' });
     }
 
-    const salt = await bcrypt.genSalt(SALT_ROUNDS);
-    const hashedPassword = await bcrypt.hash(password, salt);
-    
-    console.log('Password hashing details:');
-    console.log('Salt rounds used:', SALT_ROUNDS);
-    console.log('Generated hash:', hashedPassword);
-
     const user = new User({
       email,
-      password: hashedPassword,
+      password,
       points: 50,
       completedQuests: [{
         questId: 'REGISTER',
@@ -102,7 +94,7 @@ router.post('/register', async (req, res) => {
     });
 
     await user.save();
-    console.log('User saved successfully with hashed password');
+    console.log('User saved successfully with hashed password:', user.password);
 
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
       expiresIn: '30d'
