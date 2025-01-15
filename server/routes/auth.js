@@ -85,11 +85,9 @@ router.post('/register', async (req, res) => {
     const user = new User({
       email,
       password,
-      points: 50,
+      points: 0,
       completedQuests: [{
-        questId: 'REGISTER',
-        completedAt: new Date(),
-        lastClaim: new Date()
+
       }]
     });
 
