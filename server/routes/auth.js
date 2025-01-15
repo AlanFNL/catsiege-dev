@@ -15,26 +15,30 @@ const generateToken = (userId) => {
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
-    console.log('Login attempt for:', email); // Debug log
+    console.log('Login attempt for:', email);
+    console.log('Request body:', req.body);
 
     const user = await User.findOne({ email });
-    console.log('User found:', user ? 'yes' : 'no'); // Debug log
+    console.log('User found:', user ? 'Yes' : 'No');
 
     if (!user) {
-      console.log('No user found with email:', email); // Debug log
+      console.log('No user found with email:', email);
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
     const isValidPassword = await bcrypt.compare(password, user.password);
-    console.log('Password valid:', isValidPassword); // Debug log
+    console.log('Password comparison result:', isValidPassword);
 
     if (!isValidPassword) {
-      console.log('Invalid password for user:', email); // Debug log
+      console.log('Invalid password for user:', email);
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    const token = generateToken(user._id);
-    
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
+      expiresIn: '30d'
+    });
+    console.log('Token generated:', !!token);
+
     const userResponse = {
       _id: user._id,
       email: user.email,
@@ -42,45 +46,55 @@ router.post('/login', async (req, res) => {
       completedQuests: user.completedQuests
     };
 
-    console.log('Login successful for:', email); // Debug log
-
+    console.log('Login successful, sending response');
     res.json({
       message: 'Login successful',
       user: userResponse,
       token
     });
+
   } catch (error) {
-    console.error('Login error:', error); // Debug log
-    res.status(500).json({ message: 'Login failed', error: error.message });
+    console.error('Login error:', error);
+    res.status(500).json({ 
+      message: 'Login failed', 
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
 router.post('/register', async (req, res) => {
   try {
     const { email, password } = req.body;
+    console.log('Registration attempt for:', email);
     
-    // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: 'Email already registered' });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+    console.log('Password hashed successfully');
+
     const user = new User({
       email,
       password: hashedPassword,
       points: 50,
       completedQuests: [{
-        questId: 'register',
+        questId: 'REGISTER',
         completedAt: new Date(),
         lastClaim: new Date()
       }]
     });
 
     await user.save();
+    console.log('User saved successfully');
 
-    const token = generateToken(user._id);
-    
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
+      expiresIn: '30d'
+    });
+
     const userResponse = {
       _id: user._id,
       email: user.email,
@@ -95,7 +109,11 @@ router.post('/register', async (req, res) => {
     });
   } catch (error) {
     console.error('Registration error:', error);
-    res.status(500).json({ message: 'Registration failed' });
+    res.status(500).json({ 
+      message: 'Registration failed',
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
