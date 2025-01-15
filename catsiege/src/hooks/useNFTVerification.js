@@ -1,15 +1,15 @@
 import { useState, useCallback } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { Connection, PublicKey } from '@solana/web3.js';
-import { getParsedNftAccountsByOwner } from '@nfteyez/sol-rayz';
+import { PublicKey } from '@solana/web3.js';
+import axios from 'axios';
 
 export function useNFTVerification() {
   const { publicKey } = useWallet();
   const [isVerifying, setIsVerifying] = useState(false);
   const [hasNFT, setHasNFT] = useState(false);
 
-  const COLLECTION_ADDRESS = new PublicKey("BP4ui7x9ZGCTqFVyuED2XAM1WXZkK2JvZvBMoa7SyqAD");
-  const CONNECTION = new Connection('https://ssc-dao.genesysgo.net');
+  const COLLECTION_ADDRESS = "BP4ui7x9ZGCTqFVyuED2XAM1WXZkK2JvZvBMoa7SyqAD";
+  const HELIUS_API_KEY = "d22c0466-4718-400f-938f-86ca3c0e0cf5"; // Replace with your API key
 
   const verifyNFTOwnership = useCallback(async () => {
     if (!publicKey) {
@@ -21,22 +21,23 @@ export function useNFTVerification() {
     console.log("Verifying NFTs for wallet:", publicKey.toString());
 
     try {
-      const nfts = await getParsedNftAccountsByOwner({
-        publicAddress: publicKey.toString(),
-        connection: CONNECTION,
-        sanitize: true,
-      });
+      // Get all assets owned by the wallet using Helius API
+      const response = await axios.post(
+        `https://api.helius.xyz/v0/addresses/${publicKey.toString()}/nfts?api-key=${HELIUS_API_KEY}`,
+        {
+          ownerAddress: publicKey.toString(),
+          displayOptions: {
+            showCollectionMetadata: true,
+          },
+        }
+      );
 
-      console.log("Found NFTs:", JSON.stringify(nfts, null, 2));
+      console.log("Found NFTs:", response.data);
 
-      // Check if any NFT belongs to our collection by checking collection.key
-      const hasCollectionNFT = nfts.some(nft => {
-        console.log("Checking NFT:", nft.mint);
-        console.log("Collection data:", nft.collection);
-        
-        return nft.collection && 
-               nft.collection.key === COLLECTION_ADDRESS.toString();
-      });
+      // Check if any NFT belongs to our collection
+      const hasCollectionNFT = response.data.some(nft => 
+        nft.collection?.address === COLLECTION_ADDRESS
+      );
 
       console.log("Has CatSiege Zero NFT:", hasCollectionNFT);
       setHasNFT(hasCollectionNFT);
