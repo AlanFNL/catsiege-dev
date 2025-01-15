@@ -5,7 +5,7 @@ const jwt = require('jsonwebtoken');
 const User = require('../userSchema');
 const { isAuthenticated } = require('../middleware/auth');
 
-const SALT_ROUNDS = 10;
+const SALT_ROUNDS = 12;
 
 const generateToken = (userId) => {
   return jwt.sign({ userId }, process.env.JWT_SECRET, {
