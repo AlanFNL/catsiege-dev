@@ -7,6 +7,7 @@ import { useAuth } from "../contexts/AuthContext";
 import points from "../assets/points.png";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useNFTStatus } from "../hooks/useNFTStatus";
+import { sha256 } from "crypto-js";
 
 const questVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -15,6 +16,19 @@ const questVariants = {
     y: 0,
     transition: { delay: i * 0.1 },
   }),
+};
+
+const verifyNFTStatus = () => {
+  const storedHash = localStorage.getItem("cs_nft_v");
+  const { publicKey } = useWallet();
+
+  if (!storedHash || !publicKey) return false;
+
+  // Recreate the hash to verify
+  const expectedHash = sha256(
+    `${publicKey.toString()}_nft_verified_catsiege`
+  ).toString();
+  return storedHash === expectedHash;
 };
 
 export default function Rewards({ isOpen, onClose }) {
@@ -44,14 +58,15 @@ export default function Rewards({ isOpen, onClose }) {
       console.log("NFT holder quest check:", {
         connected,
         isCompleted: isQuestCompleted(quest.id),
-        nftVerified: user?.quests?.nftVerified,
-        fullUserQuests: user?.quests,
+        nftVerified: verifyNFTStatus(),
       });
 
       if (!connected) return "connect_wallet";
       if (isQuestCompleted(quest.id)) return "completed";
-      if (user?.quests?.nftVerified === true) {
-        console.log("NFT is verified, quest should be claimable");
+      if (verifyNFTStatus()) {
+        console.log(
+          "NFT is verified via localStorage, quest should be claimable"
+        );
         return "claimable";
       }
       return "locked";
