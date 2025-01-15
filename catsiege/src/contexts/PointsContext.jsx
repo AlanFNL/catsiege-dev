@@ -31,7 +31,7 @@ const QUESTS = {
 };
 
 export function PointsProvider({ children }) {
-  const { user, setUser } = useAuth();
+  const { user } = useAuth();
   const [completedQuests, setCompletedQuests] = useState([]);
   const [questTimers, setQuestTimers] = useState({});
 
@@ -99,8 +99,8 @@ export function PointsProvider({ children }) {
   const canClaimQuest = (questId) => {
     console.log("Checking if can claim quest:", {
       questId,
-      userQuests: user?.quests,
-      walletConnected: user?.walletAddress,
+      userQuests: user?.user?.quests,
+      walletConnected: user?.user?.walletAddress,
       isCompleted: isQuestCompleted(questId),
     });
 
@@ -110,10 +110,14 @@ export function PointsProvider({ children }) {
     // Special handling for NFT holder quest
     if (questId === "NFT_HOLDER") {
       const canClaim =
-        user?.quests?.nftVerified === true &&
-        user?.walletAddress &&
+        user?.user?.quests?.nftVerified === true &&
+        user?.user?.walletAddress &&
         !isQuestCompleted(questId);
-      console.log("NFT holder quest claimable:", canClaim);
+      console.log("NFT holder quest claimable:", canClaim, {
+        nftVerified: user?.user?.quests?.nftVerified,
+        walletAddress: user?.user?.walletAddress,
+        isCompleted: isQuestCompleted(questId),
+      });
       return canClaim;
     }
 

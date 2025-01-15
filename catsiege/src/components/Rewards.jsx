@@ -31,13 +31,7 @@ export default function Rewards({ isOpen, onClose }) {
   const [claimingQuest, setClaimingQuest] = useState(null);
 
   const getQuestStatus = (quest) => {
-    console.log("Checking quest status:", {
-      questId: quest.id,
-      connected,
-      isCompleted: isQuestCompleted(quest.id),
-      nftVerified: user?.quests?.nftVerified,
-      userQuests: user?.quests,
-    });
+    console.log("Full user object:", user);
 
     // Special handling for NFT holder quest
     if (quest.id === "NFT_HOLDER") {
@@ -47,12 +41,15 @@ export default function Rewards({ isOpen, onClose }) {
       if (isQuestCompleted(quest.id)) {
         return "completed";
       }
-      // Check specifically for nftVerified status
-      if (user?.quests?.nftVerified === true) {
+      // Access user.user.quests instead of user.quests
+      if (user?.user?.quests?.nftVerified === true) {
         console.log("NFT is verified, quest should be claimable");
         return "claimable";
       }
-      console.log("NFT not verified, quest should be locked");
+      console.log("NFT not verified, quest should be locked", {
+        userQuests: user?.user?.quests,
+        nftVerified: user?.user?.quests?.nftVerified,
+      });
       return "locked";
     }
 
