@@ -12,8 +12,8 @@ import { Connection } from "@solana/web3.js";
 import "@solana/wallet-adapter-react-ui/styles.css";
 
 export function WalletContextProvider({ children }) {
-  // Use custom RPC endpoint
-  const endpoint = "https://rpc-mainnet-fork.epochs.studio";
+  // Use GenesysGo RPC endpoint
+  const endpoint = "https://ssc-dao.genesysgo.net";
 
   // Initialize wallet adapter
   const wallets = useMemo(() => [new PhantomWalletAdapter()], []);

@@ -9,7 +9,7 @@ export function useNFTVerification() {
   const [hasNFT, setHasNFT] = useState(false);
 
   const COLLECTION_ADDRESS = new PublicKey("BP4ui7x9ZGCTqFVyuED2XAM1WXZkK2JvZvBMoa7SyqAD");
-  const CONNECTION = new Connection('https://rpc-mainnet-fork.epochs.studio');
+  const CONNECTION = new Connection('https://ssc-dao.genesysgo.net');
 
   const verifyNFTOwnership = useCallback(async () => {
     if (!publicKey) {
@@ -24,6 +24,7 @@ export function useNFTVerification() {
       const nfts = await getParsedNftAccountsByOwner({
         publicAddress: publicKey.toString(),
         connection: CONNECTION,
+        sanitize: true,
       });
 
       console.log("Found NFTs:", JSON.stringify(nfts, null, 2));
