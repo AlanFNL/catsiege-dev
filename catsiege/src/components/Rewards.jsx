@@ -6,7 +6,7 @@ import { usePoints } from "../contexts/PointsContext";
 import { useAuth } from "../contexts/AuthContext";
 import points from "../assets/points.png";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { useNFTVerification } from "../hooks/useNFTVerification";
+import { useNFTStatus } from "../hooks/useNFTStatus";
 
 const questVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -27,7 +27,7 @@ export default function Rewards({ isOpen, onClose }) {
     completedQuests,
   } = usePoints();
   const { connected } = useWallet();
-  const { hasNFT } = useNFTVerification();
+  const { nftVerified, walletAddress, isLoading } = useNFTStatus();
   const [claimingQuest, setClaimingQuest] = useState(null);
 
   const getQuestStatus = (quest) => {
@@ -35,20 +35,22 @@ export default function Rewards({ isOpen, onClose }) {
 
     // Special handling for NFT holder quest
     if (quest.id === "NFT_HOLDER") {
+      if (isLoading) {
+        return "loading";
+      }
       if (!connected) {
         return "connect_wallet";
       }
       if (isQuestCompleted(quest.id)) {
         return "completed";
       }
-      // Access user.quests directly now
-      if (user?.quests?.nftVerified === true) {
+      if (nftVerified === true) {
         console.log("NFT is verified, quest should be claimable");
         return "claimable";
       }
       console.log("NFT not verified, quest should be locked", {
-        userQuests: user?.quests,
-        nftVerified: user?.quests?.nftVerified,
+        nftVerified,
+        walletAddress,
       });
       return "locked";
     }
@@ -108,6 +110,17 @@ export default function Rewards({ isOpen, onClose }) {
 
     // Special handling for NFT holder quest
     if (quest.id === "NFT_HOLDER") {
+      if (status === "loading") {
+        return (
+          <button
+            className="w-full bg-gray-500/20 text-gray-400 py-2 rounded-lg flex items-center justify-center gap-2"
+            disabled
+          >
+            <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+            Checking NFT...
+          </button>
+        );
+      }
       if (status === "connect_wallet") {
         return (
           <button

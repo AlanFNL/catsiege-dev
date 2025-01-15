@@ -3,6 +3,7 @@ import { useAuth } from "./AuthContext";
 import { authService } from "../services/api";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useNFTVerification } from "../hooks/useNFTVerification";
+import { useNFTStatus } from "../hooks/useNFTStatus";
 
 const PointsContext = createContext(null);
 
@@ -34,6 +35,7 @@ export function PointsProvider({ children }) {
   const { user } = useAuth();
   const [completedQuests, setCompletedQuests] = useState([]);
   const [questTimers, setQuestTimers] = useState({});
+  const { nftVerified, walletAddress } = useNFTStatus();
 
   // Load quests and set up timers
   useEffect(() => {
@@ -109,12 +111,10 @@ export function PointsProvider({ children }) {
 
     if (questId === "NFT_HOLDER") {
       const canClaim =
-        user?.quests?.nftVerified === true &&
-        user?.walletAddress &&
-        !isQuestCompleted(questId);
+        nftVerified === true && walletAddress && !isQuestCompleted(questId);
       console.log("NFT holder quest claimable:", canClaim, {
-        nftVerified: user?.quests?.nftVerified,
-        walletAddress: user?.walletAddress,
+        nftVerified,
+        walletAddress,
         isCompleted: isQuestCompleted(questId),
       });
       return canClaim;

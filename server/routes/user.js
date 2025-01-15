@@ -82,4 +82,33 @@ router.post('/quests/nft-holder', isAuthenticated, async (req, res) => {
   }
 });
 
+// Add this new route to check NFT verification status
+router.get('/nft-status', isAuthenticated, async (req, res) => {
+  try {
+    console.log('Checking NFT status for user:', req.userId);
+    
+    const user = await User.findById(req.userId)
+      .select('quests.nftVerified walletAddress')
+      .lean();
+    
+    if (!user) {
+      console.log('No user found');
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    console.log('NFT status:', {
+      nftVerified: user.quests?.nftVerified,
+      walletAddress: user.walletAddress
+    });
+    
+    res.json({
+      nftVerified: user.quests?.nftVerified || false,
+      walletAddress: user.walletAddress
+    });
+  } catch (error) {
+    console.error('Error checking NFT status:', error);
+    res.status(500).json({ message: 'Error checking NFT status' });
+  }
+});
+
 module.exports = router;
