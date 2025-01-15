@@ -68,7 +68,7 @@ const userSchema = new mongoose.Schema({
 // Pre-save middleware to hash password
 userSchema.pre('save', async function(next) {
   if (this.isModified('password')) {
-    this.password = await bcrypt.hash(this.password, 12);
+    this.password = await bcrypt.hash(this.password, 10);
   }
   this.updatedAt = Date.now();
   next();
