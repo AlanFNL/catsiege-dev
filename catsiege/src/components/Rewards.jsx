@@ -31,6 +31,14 @@ export default function Rewards({ isOpen, onClose }) {
   const [claimingQuest, setClaimingQuest] = useState(null);
 
   const getQuestStatus = (quest) => {
+    console.log("Checking quest status:", {
+      questId: quest.id,
+      connected,
+      isCompleted: isQuestCompleted(quest.id),
+      nftVerified: user?.quests?.nftVerified,
+      userQuests: user?.quests,
+    });
+
     // Special handling for NFT holder quest
     if (quest.id === "NFT_HOLDER") {
       if (!connected) {
@@ -39,9 +47,12 @@ export default function Rewards({ isOpen, onClose }) {
       if (isQuestCompleted(quest.id)) {
         return "completed";
       }
-      if (user?.quests?.nftVerified) {
+      // Check specifically for nftVerified status
+      if (user?.quests?.nftVerified === true) {
+        console.log("NFT is verified, quest should be claimable");
         return "claimable";
       }
+      console.log("NFT not verified, quest should be locked");
       return "locked";
     }
 
@@ -84,7 +95,9 @@ export default function Rewards({ isOpen, onClose }) {
 
     try {
       setClaimingQuest(questId);
+      console.log("Attempting to claim quest:", questId);
       await claimQuest(questId);
+      console.log("Quest claimed successfully");
     } catch (error) {
       console.error("Failed to claim quest:", error);
     } finally {
