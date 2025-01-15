@@ -47,11 +47,7 @@ export const authService = {
       const response = await api.get('/user/me');
       console.log('API: User data response:', response.data);
       
-      if (!response.data.user) {
-        throw new Error('Invalid response format');
-      }
-      
-      return response.data; // Should contain { user: {...} }
+      return response.data; // The complete user object from backend
     } catch (error) {
       console.error('Me error:', error.response || error);
       if (error.response?.status === 401) {

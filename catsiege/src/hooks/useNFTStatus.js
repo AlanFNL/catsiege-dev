@@ -1,56 +1,42 @@
 import { useState, useEffect } from 'react';
+import { api } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
 export function useNFTStatus() {
-  const [nftStatus, setNFTStatus] = useState({
+  const [nftStatus, setNftStatus] = useState({
     nftVerified: false,
     walletAddress: null,
-    isLoading: true,
-    error: null
+    isLoading: true
   });
-
-  const checkNFTStatus = async () => {
-    try {
-      const token = localStorage.getItem('tokenCat');
-      if (!token) {
-        throw new Error('No token found');
-      }
-
-      const response = await fetch('https://catsiege-dev.onrender.com/api/user/nft-status', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch NFT status');
-      }
-
-      const data = await response.json();
-      console.log('NFT status response:', data);
-      
-      setNFTStatus({
-        nftVerified: data.nftVerified,
-        walletAddress: data.walletAddress,
-        isLoading: false,
-        error: null
-      });
-    } catch (error) {
-      console.error('Error checking NFT status:', error);
-      setNFTStatus(prev => ({
-        ...prev,
-        isLoading: false,
-        error: error.message
-      }));
-    }
-  };
+  const { user } = useAuth();
 
   useEffect(() => {
-    checkNFTStatus();
-  }, []);
+    const fetchNFTStatus = async () => {
+      try {
+        // You can either use the user data directly
+        if (user) {
+          setNftStatus({
+            nftVerified: user.quests?.nftVerified || false,
+            walletAddress: user.walletAddress || null,
+            isLoading: false
+          });
+        }
+        
+        // Or fetch it separately if needed
+        const response = await api.get('https://catsiege-dev.onrender.com/api/user/nft-status');
+        setNftStatus({
+          nftVerified: response.data.nftVerified,
+          walletAddress: response.data.walletAddress,
+          isLoading: false
+        });
+      } catch (error) {
+        console.error('Error fetching NFT status:', error);
+        setNftStatus(prev => ({ ...prev, isLoading: false }));
+      }
+    };
 
-  return {
-    ...nftStatus,
-    refreshStatus: checkNFTStatus
-  };
+    fetchNFTStatus();
+  }, [user]);
+
+  return nftStatus;
 } 

@@ -36,6 +36,7 @@ export default function Rewards({ isOpen, onClose }) {
       nftVerified: user?.quests?.nftVerified,
       walletConnected: connected,
       hasWallet: Boolean(user?.walletAddress),
+      fullUser: user,
     });
 
     if (quest.id === "NFT_HOLDER") {
