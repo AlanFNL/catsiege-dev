@@ -4,12 +4,13 @@ const User = require('../userSchema.js');
 
 const router = express.Router();
 
-// Get user details
+// Get user details including NFT verification status
 router.get('/me', isAuthenticated, async (req, res) => {
   try {
-    console.log('Fetching user data for ID:', req.userId);
+    console.log('Fetching complete user data for ID:', req.userId);
+    
     const user = await User.findById(req.userId)
-      .select('-password')
+      .select('-password') // Exclude password
       .lean();
     
     if (!user) {
@@ -17,16 +18,20 @@ router.get('/me', isAuthenticated, async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    console.log('User found:', {
+    // Log the complete user data
+    console.log('Complete user data:', {
       id: user._id,
+      email: user.email,
       quests: user.quests,
       walletAddress: user.walletAddress,
-      completedQuests: user.completedQuests
+      completedQuests: user.completedQuests,
+      points: user.points
     });
     
+    // Return the complete user object
     res.json(user);
   } catch (error) {
-    console.error('Error fetching user:', error);
+    console.error('Error fetching user data:', error);
     res.status(500).json({ message: 'Error fetching user data' });
   }
 });

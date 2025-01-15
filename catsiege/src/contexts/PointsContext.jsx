@@ -99,25 +99,30 @@ export function PointsProvider({ children }) {
   };
 
   const canClaimQuest = (questId) => {
-    console.log("Checking if can claim quest:", {
+    console.log("Checking quest claimability:", {
       questId,
-      userQuests: user?.quests,
-      walletConnected: user?.walletAddress,
-      isCompleted: isQuestCompleted(questId),
+      user,
+      nftVerified: user?.quests?.nftVerified,
+      completedQuests: user?.completedQuests,
     });
 
     const quest = QUESTS[questId];
     if (!quest) return false;
 
+    // Special handling for NFT holder quest
     if (questId === "NFT_HOLDER") {
-      const canClaim =
-        nftVerified === true && walletAddress && !isQuestCompleted(questId);
-      console.log("NFT holder quest claimable:", canClaim, {
-        nftVerified,
-        walletAddress,
-        isCompleted: isQuestCompleted(questId),
+      const isVerified = user?.quests?.nftVerified === true;
+      const hasWallet = Boolean(user?.walletAddress);
+      const notCompleted = !isQuestCompleted(questId);
+
+      console.log("NFT Quest Status:", {
+        isVerified,
+        hasWallet,
+        notCompleted,
+        canClaim: isVerified && hasWallet && notCompleted,
       });
-      return canClaim;
+
+      return isVerified && hasWallet && notCompleted;
     }
 
     // One-time quests
@@ -139,9 +144,7 @@ export function PointsProvider({ children }) {
     console.log("Attempting to claim quest:", {
       questId,
       canClaim: canClaimQuest(questId),
-      nftVerified,
-      walletAddress,
-      isCompleted: isQuestCompleted(questId),
+      user,
     });
 
     if (!canClaimQuest(questId)) {
@@ -151,28 +154,18 @@ export function PointsProvider({ children }) {
 
     try {
       const response = await authService.claimQuest(questId);
-      console.log("Claim quest response:", response);
+      console.log("Quest claim response:", response);
 
-      // Update completed quests and timers
-      setCompletedQuests(response.completedQuests);
-
-      // Update timers for daily quests
-      const dailyQuest = response.completedQuests.find(
-        (q) => q.questId === questId && QUESTS[questId]?.type === "daily"
-      );
-
-      if (dailyQuest?.nextAvailable) {
-        setQuestTimers((prev) => ({
-          ...prev,
-          [questId]: new Date(dailyQuest.nextAvailable).getTime(),
-        }));
+      // Update completed quests
+      if (response.completedQuests) {
+        setCompletedQuests(response.completedQuests);
       }
 
-      // Update user points
-      if (setUser && response.totalPoints !== undefined) {
+      // Update user points if available
+      if (response.totalPoints !== undefined) {
         setUser((prevUser) => ({
           ...prevUser,
-          points: Number(response.totalPoints.toFixed(2)),
+          points: response.totalPoints,
         }));
       }
 
