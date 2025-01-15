@@ -2,7 +2,7 @@ import React from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { useNFTVerification } from "../hooks/useNFTVerification";
-import { sha256 } from "crypto-js";
+import CryptoJS from "crypto-js";
 
 export function WalletConnect() {
   const { connected, connecting, publicKey } = useWallet();
@@ -13,7 +13,7 @@ export function WalletConnect() {
       verifyNFTOwnership()
         .then((verified) => {
           if (verified) {
-            const hash = sha256(
+            const hash = CryptoJS.SHA256(
               `${publicKey.toString()}_nft_verified_catsiege`
             ).toString();
             localStorage.setItem("cs_nft_v", hash);

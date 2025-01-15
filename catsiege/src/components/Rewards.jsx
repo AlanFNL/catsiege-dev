@@ -7,7 +7,7 @@ import { useAuth } from "../contexts/AuthContext";
 import points from "../assets/points.png";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useNFTStatus } from "../hooks/useNFTStatus";
-import { sha256 } from "crypto-js";
+import CryptoJS from "crypto-js";
 
 const questVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -24,8 +24,8 @@ const verifyNFTStatus = () => {
 
   if (!storedHash || !publicKey) return false;
 
-  // Recreate the hash to verify
-  const expectedHash = sha256(
+  // Use CryptoJS.SHA256 instead of sha256
+  const expectedHash = CryptoJS.SHA256(
     `${publicKey.toString()}_nft_verified_catsiege`
   ).toString();
   return storedHash === expectedHash;
