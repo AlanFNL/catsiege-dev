@@ -1,15 +1,18 @@
 import { useState, useCallback } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { PublicKey } from '@solana/web3.js';
-import axios from 'axios';
+import { Connection, PublicKey } from '@solana/web3.js';
+import { getParsedNftAccountsByOwner } from '@nfteyez/sol-rayz';
 
 export function useNFTVerification() {
   const { publicKey } = useWallet();
   const [isVerifying, setIsVerifying] = useState(false);
   const [hasNFT, setHasNFT] = useState(false);
 
+  // Connect to mainnet
+  const connection = new Connection('https://api.mainnet-beta.solana.com', 'confirmed');
+  
+  // Collection address
   const COLLECTION_ADDRESS = "BP4ui7x9ZGCTqFVyuED2XAM1WXZkK2JvZvBMoa7SyqAD";
-  const HELIUS_API_KEY = "d22c0466-4718-400f-938f-86ca3c0e0cf5"; // Replace with your API key
 
   const verifyNFTOwnership = useCallback(async () => {
     if (!publicKey) {
@@ -21,27 +24,40 @@ export function useNFTVerification() {
     console.log("Verifying NFTs for wallet:", publicKey.toString());
 
     try {
-      // Get all assets owned by the wallet using Helius API
-      const response = await axios.post(
-        `https://api.helius.xyz/v0/addresses/${publicKey.toString()}/nfts?api-key=${HELIUS_API_KEY}`,
-        {
-          ownerAddress: publicKey.toString(),
-          displayOptions: {
-            showCollectionMetadata: true,
-          },
+      // Fetch all NFTs owned by the wallet
+      const nftAccounts = await getParsedNftAccountsByOwner({
+        publicAddress: publicKey.toString(),
+        connection: connection,
+      });
+
+      console.log("Found NFTs:", nftAccounts);
+
+      // Check each NFT to see if it belongs to our collection
+      for (const nft of nftAccounts) {
+        console.log("Checking NFT:", {
+          mint: nft.mint,
+          data: nft.data,
+          updateAuthority: nft.updateAuthority,
+          collection: nft.collection
+        });
+
+        // Check multiple possible locations for collection information
+        const isInCollection = 
+          nft.collection?.address === COLLECTION_ADDRESS ||
+          nft.collection?.key === COLLECTION_ADDRESS ||
+          nft.data?.collection?.key === COLLECTION_ADDRESS ||
+          nft.data?.collection?.address === COLLECTION_ADDRESS;
+
+        if (isInCollection) {
+          console.log("Found matching NFT:", nft.mint);
+          setHasNFT(true);
+          return true;
         }
-      );
+      }
 
-      console.log("Found NFTs:", response.data);
-
-      // Check if any NFT belongs to our collection
-      const hasCollectionNFT = response.data.some(nft => 
-        nft.collection?.address === COLLECTION_ADDRESS
-      );
-
-      console.log("Has CatSiege Zero NFT:", hasCollectionNFT);
-      setHasNFT(hasCollectionNFT);
-      return hasCollectionNFT;
+      console.log("No matching NFTs found");
+      setHasNFT(false);
+      return false;
 
     } catch (error) {
       console.error("Error verifying NFT ownership:", error);
