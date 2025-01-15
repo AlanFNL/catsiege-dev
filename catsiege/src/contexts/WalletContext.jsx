@@ -6,17 +6,14 @@ import {
 import { WalletAdapterNetwork } from "@solana/wallet-adapter-base";
 import { PhantomWalletAdapter } from "@solana/wallet-adapter-wallets";
 import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
-import { clusterApiUrl } from "@solana/web3.js";
+import { Connection } from "@solana/web3.js";
 
 // Import wallet adapter styles
 import "@solana/wallet-adapter-react-ui/styles.css";
 
 export function WalletContextProvider({ children }) {
-  // Use mainnet-beta instead of devnet
-  const network = WalletAdapterNetwork.Mainnet;
-
-  // Define the RPC endpoint for mainnet
-  const endpoint = useMemo(() => clusterApiUrl(network), [network]);
+  // Use custom RPC endpoint
+  const endpoint = "https://rpc-mainnet-fork.epochs.studio";
 
   // Initialize wallet adapter
   const wallets = useMemo(() => [new PhantomWalletAdapter()], []);
