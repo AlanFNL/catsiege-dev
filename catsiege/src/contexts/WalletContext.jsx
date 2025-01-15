@@ -3,7 +3,6 @@ import {
   ConnectionProvider,
   WalletProvider,
 } from "@solana/wallet-adapter-react";
-import { WalletAdapterNetwork } from "@solana/wallet-adapter-base";
 import { PhantomWalletAdapter } from "@solana/wallet-adapter-wallets";
 import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
 import { Connection } from "@solana/web3.js";
@@ -12,8 +11,9 @@ import { Connection } from "@solana/web3.js";
 import "@solana/wallet-adapter-react-ui/styles.css";
 
 export function WalletContextProvider({ children }) {
-  // Use GenesysGo RPC endpoint
-  const endpoint = "https://ssc-dao.genesysgo.net";
+  // Use QuickNode RPC endpoint
+  const endpoint =
+    "https://long-proportionate-yard.solana-mainnet.quiknode.pro/97ae51ca292b54962c8d31d524d3b615d00088ec/";
 
   // Initialize wallet adapter
   const wallets = useMemo(() => [new PhantomWalletAdapter()], []);
