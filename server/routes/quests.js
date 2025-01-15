@@ -158,6 +158,13 @@ router.post('/claim', isAuthenticated, async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
+    console.log('User before claim:', {
+      quests: user.quests,
+      completedQuests: user.completedQuests,
+      points: user.points,
+      walletAddress: user.walletAddress
+    });
+
     // Check if quest is already completed (for one-time quests)
     const isCompleted = user.completedQuests.some(q => q.questId === questId);
     if (isCompleted && questId !== 'DAILY_LOGIN') {
@@ -190,16 +197,20 @@ router.post('/claim', isAuthenticated, async (req, res) => {
     }
 
     await user.save();
-    console.log('Quest claimed successfully:', {
-      questId,
-      points: questPoints,
-      totalPoints: user.points
-    });
-
-    res.json({
+    
+    // Create explicit response object
+    const responseData = {
       completedQuests: user.completedQuests,
-      totalPoints: user.points
-    });
+      totalPoints: user.points,
+      pointsEarned: questPoints,
+      quests: {
+        nftVerified: user.quests?.nftVerified || false,
+        nftHolder: user.quests?.nftHolder || false
+      }
+    };
+
+    console.log('Quest claim response data:', responseData);
+    res.json(responseData);
   } catch (error) {
     console.error('Error claiming quest:', error);
     res.status(500).json({ message: 'Error claiming quest' });

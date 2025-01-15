@@ -100,8 +100,12 @@ export const authService = {
 
   claimQuest: async (questId) => {
     try {
-      const response = await api.post('/quests/claim', { questId });
+      console.log('Attempting to claim quest with ID:', questId);
       
+      const response = await api.post('/quests/claim', { questId });
+      console.log('Raw quest claim response:', response.data);
+      
+      // Map the response data to ensure consistent structure
       const mappedResponse = {
         completedQuests: response.data.completedQuests?.map(quest => ({
           questId: quest.questId,
@@ -120,7 +124,11 @@ export const authService = {
       console.log('Quest claim mapped response:', mappedResponse);
       return mappedResponse;
     } catch (error) {
-      console.error('Error claiming quest:', error);
+      console.error('Error claiming quest:', {
+        error,
+        response: error.response?.data,
+        status: error.response?.status
+      });
       throw error;
     }
   },
