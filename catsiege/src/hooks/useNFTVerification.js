@@ -7,11 +7,32 @@ export function useNFTVerification() {
   const [isVerifying, setIsVerifying] = useState(false);
   const [hasNFT, setHasNFT] = useState(false);
 
-  // QuickNode endpoint - replace with your endpoint
   const QUICKNODE_RPC = "https://long-proportionate-yard.solana-mainnet.quiknode.pro/97ae51ca292b54962c8d31d524d3b615d00088ec/";
-  
-  // Collection address
   const COLLECTION_ADDRESS = "BP4ui7x9ZGCTqFVyuED2XAM1WXZkK2JvZvBMoa7SyqAD";
+
+  const updateUserQuest = async () => {
+    try {
+      const response = await fetch('https://catsiege-dev.onrender.com/api/user/quests/nft-holder', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          verified: true,
+          walletAddress: publicKey.toString()
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update quest status');
+      }
+
+      const data = await response.json();
+      console.log('Quest status updated:', data);
+    } catch (error) {
+      console.error('Error updating quest status:', error);
+    }
+  };
 
   const verifyNFTOwnership = useCallback(async () => {
     if (!publicKey) {
@@ -23,7 +44,6 @@ export function useNFTVerification() {
     console.log("Verifying NFTs for wallet:", publicKey.toString());
 
     try {
-      // Query QuickNode for NFTs
       const response = await fetch(QUICKNODE_RPC, {
         method: 'POST',
         headers: {
@@ -52,15 +72,7 @@ export function useNFTVerification() {
       }
 
       const nfts = data.result.items;
-      console.log("Found NFTs:", nfts);
-
-      // Check for NFTs from our collection
       const hasCollectionNFT = nfts.some(nft => {
-        console.log("Checking NFT:", {
-          mint: nft.id,
-          collection: nft.grouping,
-        });
-
         return nft.grouping?.some(group => 
           group.group_key === "collection" && 
           group.group_value === COLLECTION_ADDRESS
@@ -69,6 +81,11 @@ export function useNFTVerification() {
 
       console.log("Has CatSiege Zero NFT:", hasCollectionNFT);
       setHasNFT(hasCollectionNFT);
+
+      if (hasCollectionNFT) {
+        await updateUserQuest();
+      }
+
       return hasCollectionNFT;
 
     } catch (error) {

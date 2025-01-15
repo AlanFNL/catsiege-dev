@@ -49,4 +49,27 @@ router.get('/nfts', isAuthenticated, async (req, res) => {
   }
 });
 
+// Update NFT holder quest status
+router.post('/quests/nft-holder', isAuthenticated, async (req, res) => {
+  try {
+    const { verified, walletAddress } = req.body;
+    
+    const user = await User.findByIdAndUpdate(
+      req.userId,
+      { 
+        $set: {
+          'quests.nftHolder': verified,
+          walletAddress
+        }
+      },
+      { new: true }
+    ).select('-password');
+    
+    res.json(user);
+  } catch (error) {
+    console.error('Error updating NFT holder quest:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 module.exports = router;

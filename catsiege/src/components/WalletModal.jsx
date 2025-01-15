@@ -3,26 +3,8 @@ import ReactDOM from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 import { WalletConnect } from "./WalletConnect";
-import { useWallet } from "@solana/wallet-adapter-react";
-import { useNFTVerification } from "../hooks/useNFTVerification";
 
 export default function WalletModal({ isOpen, onClose }) {
-  const { connected } = useWallet();
-  const { hasNFT, isVerifying } = useNFTVerification();
-
-  const getStatusContent = () => {
-    if (isVerifying) {
-      return "Verifying NFT ownership...";
-    }
-    if (hasNFT) {
-      return "✨ You own an NFT from our collection!";
-    }
-    if (connected) {
-      return "No eligible NFTs found in your wallet";
-    }
-    return "Connect your wallet to verify NFT ownership";
-  };
-
   return ReactDOM.createPortal(
     <AnimatePresence>
       {isOpen && (
@@ -73,15 +55,8 @@ export default function WalletModal({ isOpen, onClose }) {
                     </p>
                   </div>
 
-                  <div className="flex flex-col items-center gap-6">
-                    <WalletConnect />
-
-                    <div className="w-full p-4 rounded-lg bg-[#FFF5E4]/5">
-                      <h2 className="text-xl font-bold text-[#FFF5E4] mb-2">
-                        NFT Status
-                      </h2>
-                      <p className="text-[#FFF5E4]/60">{getStatusContent()}</p>
-                    </div>
+                  <div className="flex flex-col items-center">
+                    <WalletConnect onClose={onClose} />
                   </div>
                 </div>
               </motion.div>
