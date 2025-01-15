@@ -1,11 +1,13 @@
 import { useState, useCallback } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { Connection, PublicKey } from '@solana/web3.js';
+import { useAuth } from '../contexts/AuthContext';
 
 export function useNFTVerification() {
   const { publicKey } = useWallet();
   const [isVerifying, setIsVerifying] = useState(false);
   const [hasNFT, setHasNFT] = useState(false);
+  const { refreshUser } = useAuth();
 
   const QUICKNODE_RPC = "https://long-proportionate-yard.solana-mainnet.quiknode.pro/97ae51ca292b54962c8d31d524d3b615d00088ec/";
   const COLLECTION_ADDRESS = "BP4ui7x9ZGCTqFVyuED2XAM1WXZkK2JvZvBMoa7SyqAD";
@@ -42,19 +44,15 @@ export function useNFTVerification() {
         throw new Error(data.message || 'Failed to update quest status');
       }
 
-      console.log('Quest status updated successfully:', data);
+      console.log('Quest status updated:', data);
       
-      // Force refresh user data
-      await fetch('https://catsiege-dev.onrender.com/api/user/me', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      // Refresh user data after updating quest status
+      await refreshUser();
 
       return data;
     } catch (error) {
       console.error('Error updating quest status:', error);
-      throw error; // Re-throw to handle in the calling function
+      throw error;
     }
   };
 
