@@ -5,6 +5,8 @@ const jwt = require('jsonwebtoken');
 const User = require('../userSchema');
 const { isAuthenticated } = require('../middleware/auth');
 
+const SALT_ROUNDS = 10;
+
 const generateToken = (userId) => {
   return jwt.sign({ userId }, process.env.JWT_SECRET, {
     expiresIn: '30d'
@@ -17,6 +19,7 @@ router.post('/login', async (req, res) => {
     const { email, password } = req.body;
     console.log('Login attempt for:', email);
     console.log('Request body:', req.body);
+    console.log('Using salt rounds:', SALT_ROUNDS);
 
     const user = await User.findOne({ email });
     console.log('User found:', user ? 'Yes' : 'No');
@@ -28,6 +31,9 @@ router.post('/login', async (req, res) => {
 
     console.log('Stored hashed password:', user.password);
     console.log('Attempting to compare with provided password');
+    
+    const storedSaltRounds = user.password.split('$')[2];
+    console.log('Stored password salt rounds:', storedSaltRounds);
     
     const isValidPassword = await bcrypt.compare(password, user.password);
     console.log('Password comparison result:', isValidPassword);
@@ -70,13 +76,13 @@ router.post('/register', async (req, res) => {
   try {
     const { email, password } = req.body;
     console.log('Registration attempt for:', email);
+    console.log('Using salt rounds:', SALT_ROUNDS);
     
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: 'Email already registered' });
     }
 
-    const SALT_ROUNDS = 10;
     const salt = await bcrypt.genSalt(SALT_ROUNDS);
     const hashedPassword = await bcrypt.hash(password, salt);
     
