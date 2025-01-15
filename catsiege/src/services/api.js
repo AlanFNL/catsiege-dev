@@ -45,9 +45,21 @@ export const authService = {
       }
 
       const response = await api.get('/user/me');
-      console.log('API: User data response:', response.data);
       
-      return response.data; // The complete user object from backend
+      const userData = {
+        id: response.data.id,
+        email: response.data.email,
+        walletAddress: response.data.walletAddress || null,
+        points: response.data.points || 0,
+        quests: {
+          nftVerified: response.data.quests?.nftVerified || false,
+          nftHolder: response.data.quests?.nftHolder || false
+        },
+        completedQuests: response.data.completedQuests || []
+      };
+
+      console.log('API: Mapped user data:', userData);
+      return userData;
     } catch (error) {
       console.error('Me error:', error.response || error);
       if (error.response?.status === 401) {
@@ -70,7 +82,10 @@ export const authService = {
   async getQuests() {
     try {
       const response = await api.get('/user/quests');
-      return response.data;
+      return {
+        completedQuests: response.data.completedQuests || [],
+        points: response.data.points || 0
+      };
     } catch (error) {
       console.error('Get quests error:', error);
       throw error.response?.data || { message: 'Network error' };
@@ -125,6 +140,19 @@ export const authService = {
       return response.data;
     } catch (error) {
       console.error('Update points error:', error);
+      throw error.response?.data || { message: 'Network error' };
+    }
+  },
+
+  async getNFTStatus() {
+    try {
+      const response = await api.get('/user/nft-status');
+      return {
+        nftVerified: response.data.nftVerified || false,
+        walletAddress: response.data.walletAddress || null
+      };
+    } catch (error) {
+      console.error('Get NFT status error:', error);
       throw error.response?.data || { message: 'Network error' };
     }
   },
