@@ -22,6 +22,17 @@ const QUESTS = {
   }
 };
 
+// Helper function to check if enough time has passed since last claim
+const canClaimDaily = (lastClaimDate) => {
+  if (!lastClaimDate) return true;
+  
+  const now = new Date();
+  const last = new Date(lastClaimDate);
+  const hoursSinceLastClaim = (now - last) / (1000 * 60 * 60);
+  
+  return hoursSinceLastClaim >= 24;
+};
+
 // Get user's completed quests
 router.get('/user/quests', isAuthenticated, async (req, res) => {
   try {
@@ -30,8 +41,21 @@ router.get('/user/quests', isAuthenticated, async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
     
+    // Add next available claim time for daily quests
+    const completedQuestsWithTiming = user.completedQuests.map(quest => {
+      if (quest.questId === 'DAILY_LOGIN') {
+        const lastClaim = new Date(quest.lastClaim);
+        const nextAvailable = new Date(lastClaim.getTime() + (24 * 60 * 60 * 1000));
+        return {
+          ...quest.toObject(),
+          nextAvailable: nextAvailable.toISOString()
+        };
+      }
+      return quest.toObject();
+    });
+    
     res.json({
-      completedQuests: user.completedQuests || [],
+      completedQuests: completedQuestsWithTiming,
       points: user.points
     });
   } catch (error) {
@@ -71,13 +95,11 @@ router.post('/user/quests/claim', isAuthenticated, async (req, res) => {
     // Check daily quest cooldown
     if (quest.type === 'daily') {
       const lastClaim = user.completedQuests.find(q => q.questId === questId)?.lastClaim;
-      if (lastClaim) {
-        const today = new Date().toISOString().split('T')[0];
-        const lastClaimDate = new Date(lastClaim).toISOString().split('T')[0];
-        
-        if (lastClaimDate === today) {
-          return res.status(400).json({ message: 'Daily quest already claimed today' });
-        }
+      if (lastClaim && !canClaimDaily(lastClaim)) {
+        return res.status(400).json({ 
+          message: 'Daily quest not ready yet',
+          nextAvailable: new Date(new Date(lastClaim).getTime() + (24 * 60 * 60 * 1000)).toISOString()
+        });
       }
     }
 
@@ -96,14 +118,26 @@ router.post('/user/quests/claim', isAuthenticated, async (req, res) => {
       user.completedQuests.push(questCompletion);
     }
 
-    // Update points
-    user.points = (user.points || 0) + quest.points;
+    // Update points with 2 decimal precision
+    user.points = Number((user.points + quest.points).toFixed(2));
 
     await user.save();
 
+    // Include next available time for daily quests
+    const completedQuestsWithTiming = user.completedQuests.map(quest => {
+      if (quest.questId === 'DAILY_LOGIN') {
+        const nextAvailable = new Date(now.getTime() + (24 * 60 * 60 * 1000));
+        return {
+          ...quest.toObject(),
+          nextAvailable: nextAvailable.toISOString()
+        };
+      }
+      return quest.toObject();
+    });
+
     res.json({
       message: 'Quest claimed successfully',
-      completedQuests: user.completedQuests,
+      completedQuests: completedQuestsWithTiming,
       totalPoints: user.points,
       pointsEarned: quest.points
     });

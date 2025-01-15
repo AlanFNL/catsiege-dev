@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const session = require('express-session');
+const MongoStore = require('connect-mongo');
 const rateLimit = require('express-rate-limit');
 const cors = require('cors');
 const authRoutes = require('./routes/auth.js');
@@ -30,11 +31,17 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-// Session configuration
+// Session configuration with MongoDB store
 app.use(session({
   secret: process.env.SESSION_SECRET || 'your-secret-key',
   resave: false,
   saveUninitialized: false,
+  store: MongoStore.create({
+    mongoUrl: process.env.MONGODB_URI,
+    ttl: 24 * 60 * 60, // Session TTL (1 day)
+    autoRemove: 'native', // Enable automatic removal of expired sessions
+    touchAfter: 24 * 3600 // Time period in seconds between session updates
+  }),
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
