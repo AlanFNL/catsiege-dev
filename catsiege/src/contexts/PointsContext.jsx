@@ -96,16 +96,14 @@ export function PointsProvider({ children }) {
     return false;
   };
 
-  const canClaimQuest = (
-    questId,
-    { hasNFT = false, isWalletConnected = false } = {}
-  ) => {
+  const canClaimQuest = (questId) => {
     const quest = QUESTS[questId];
     if (!quest) return false;
 
     // Special handling for NFT holder quest
     if (questId === "NFT_HOLDER") {
-      return isWalletConnected && hasNFT && !isQuestCompleted(questId);
+      // Check if user has verified NFT ownership and hasn't claimed yet
+      return user?.quests?.nftHolder === true && !isQuestCompleted(questId);
     }
 
     // One-time quests

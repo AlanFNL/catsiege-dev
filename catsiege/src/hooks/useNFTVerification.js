@@ -12,10 +12,17 @@ export function useNFTVerification() {
 
   const updateUserQuest = async () => {
     try {
-      const response = await fetch('https://catsiege-dev.onrender.com/api/user/quests/nft-holder', {
+      const token = localStorage.getItem('tokenCat');
+      
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      const response = await fetch('/api/user/quests/nft-holder', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
           verified: true,
