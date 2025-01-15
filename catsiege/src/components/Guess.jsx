@@ -5,13 +5,30 @@ import GuessingGame from "./GuessGame";
 import bg from "../assets/guess-start11.webp";
 import button1 from "../assets/guess-start-b.webp";
 import button2 from "../assets/guess-start-b2.webp";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import backB from "../assets/guess-game8.png";
 import bgMusic from "../assets/guess-game-music.mp3";
+import { useAuth } from "../contexts/AuthContext";
+import { authService } from "../services/api";
+
+const tabContentVariants = {
+  hidden: { opacity: 0, x: -20 },
+  visible: { opacity: 1, x: 0, transition: { duration: 0.3 } },
+  exit: { opacity: 0, x: 20, transition: { duration: 0.3 } },
+};
+
+const mainContentVariants = {
+  hidden: { opacity: 0, scale: 0.95 },
+  visible: { opacity: 1, scale: 1, transition: { duration: 0.4 } },
+  exit: { opacity: 0, scale: 0.95, transition: { duration: 0.3 } },
+};
 
 function Guess() {
   const [activeTab, setActiveTab] = useState("");
   const audioRef = useRef(new Audio(bgMusic));
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const { user, setUser } = useAuth();
+  const [activeRuleTab, setActiveRuleTab] = useState("objective");
 
   audioRef.current.volume = 0.2;
   audioRef.current.loop = true;
@@ -37,6 +54,28 @@ function Guess() {
     audioRef.current.currentTime = 0;
   };
 
+  const handleStartGameConfirm = async () => {
+    try {
+      // Deduct 5 points via API
+      const response = await authService.updatePoints(-5);
+
+      // Update user points in context
+      setUser((prev) => ({
+        ...prev,
+        points: response.points,
+      }));
+
+      // Start the game
+      setShowConfirmation(false);
+      setActiveTab("game");
+      audioRef.current.play().catch((error) => {
+        console.log("Audio playback failed:", error);
+      });
+    } catch (error) {
+      console.error("Failed to start game:", error);
+    }
+  };
+
   React.useEffect(() => {
     const audio = audioRef.current;
     return () => {
@@ -46,126 +85,220 @@ function Guess() {
   }, []);
 
   return (
-    <section className="relative w-screen h-screen bg-[url('./assets/BG.webp')]  bg-center flex justify-center items-center">
-      {activeTab == "" && (
-        <div className="flex h-[80vh] w-[90vw] sm:w-[500px] flex-col justify-center items-center ">
-          <img
-            src={bg}
-            alt=""
-            className="absolute object-cover mx-auto h-[80vh] w-[90vw] sm:w-[600px]"
-          />
-          <h1 className="mt-[18%] text-2xl font-bold z-10">
-            The haunted number
-          </h1>
+    <section className="relative w-screen h-screen bg-[url('./assets/BG.webp')] bg-center flex justify-center items-center">
+      <AnimatePresence mode="wait">
+        {activeTab === "" && (
+          <motion.div
+            key="main-menu"
+            variants={mainContentVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className="relative w-[90vw] sm:w-[600px] flex flex-col items-center h-[80vh] bg-black/50 backdrop-blur-sm rounded-xl border border-[#FFF5E4]/20 p-8"
+          >
+            <h1 className="mt-[18%] text-2xl text-center font-bold z-10 text-[#FFF5E4]">
+              The haunted number
+            </h1>
 
-          <div className="w-[500px] h-[80vh] md:h-[600px] flex flex-col gap-7 justify-center text-center items-center px-6">
-            <div className="h-16 w-[350px]  z-10 relative group overflow-hidden">
-              <img
-                src={button1}
-                alt=""
-                className="h-[110px] w-[350px] absolute object-cover inset-0 -mx-2.5 my-auto transition-opacity duration-300 group-hover:opacity-0"
-              />
-              <img
-                src={button2}
-                alt=""
-                className="h-[110px] w-[350px] absolute object-cover inset-0 my-auto transition-opacity duration-300 opacity-0 group-hover:opacity-100"
-              />
-              <button
-                onClick={startGame}
-                className="z-10 text-center font-bold text-3xl relative group h-16 w-full p-0 overflow-hidden transition-all duration-300 group-hover:text-[#FBE294]"
+            <div className="w-[500px] h-[80vh] md:h-[600px] flex flex-col gap-7 justify-center text-center items-center px-6">
+              <motion.button
+                onClick={() => setShowConfirmation(true)}
+                className="z-10 text-center font-bold text-3xl h-16 w-[350px] rounded-lg bg-black/60 border border-[#FFF5E4]/20 backdrop-blur-sm text-[#FFF5E4] hover:bg-[#FFF5E4]/10 transition-all"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
               >
                 START
-              </button>
-            </div>
+              </motion.button>
 
-            <div className="h-16 w-[350px]  z-10 relative group overflow-hidden">
-              <img
-                src={button1}
-                alt=""
-                className="h-[110px] w-[350px] absolute object-cover inset-0 -mx-2.5 my-auto transition-opacity duration-300 group-hover:opacity-0"
-              />
-              <img
-                src={button2}
-                alt=""
-                className="h-[110px] w-[350px] absolute object-cover inset-0 my-auto transition-opacity duration-300 opacity-0 group-hover:opacity-100"
-              />
-              <button
+              <motion.button
                 onClick={setRules}
-                className="z-10 text-center font-bold text-3xl relative group h-16 w-full p-0 overflow-hidden transition-all duration-300 group-hover:text-[#FBE294]"
+                className="z-10 text-center font-bold text-3xl h-16 w-[350px] rounded-lg bg-black/60 border border-[#FFF5E4]/20 backdrop-blur-sm text-[#FFF5E4] hover:bg-[#FFF5E4]/10 transition-all"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
               >
                 RULES
-              </button>
+              </motion.button>
             </div>
-          </div>
-        </div>
-      )}
+          </motion.div>
+        )}
 
-      {activeTab == "rules" && (
-        <div className="flex justify-center flex-col items-center mb-[50%] sm:mb-0">
+        {activeTab === "rules" && (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="flex flex-col justify-center items-center"
+            key="rules"
+            variants={mainContentVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className="flex justify-center flex-col items-center"
           >
-            <img
-              src={bg}
-              alt=""
-              className="absolute h-[80vh] object-cover w-[90vw] sm:w-[600px]"
-            />
-            <div className="z-50 mt-[50%] sm:mt-0">
-              <div className=" flex items-center justify-center mt-[20%]  sm:mb-[32%] sm:mt-[42%] hover:cursor-pointer">
-                <h1 className="text-3xl font-bold flex z-10">RULES</h1>
-              </div>
-              <div className="w-[350px] h-[80vh] md:h-[500px] text-[10px] mt-[20%] sm:text-[12px] gap-3 flex flex-col items-center px-6 text-yellow-200 z-10">
-                <p className="italic">The darkness whispers you challenge.</p>
-                <p className="italic">A secret number hides in the shadows.</p>
+            <div className="relative w-[90vw] sm:w-[600px] h-[80vh] bg-black/50 backdrop-blur-sm rounded-xl border border-[#FFF5E4]/20 p-8">
+              <div className="flex flex-col items-center">
+                <h1 className="text-3xl font-bold text-[#FFF5E4] mb-8">
+                  RULES
+                </h1>
 
-                <p className="mt-4 italic">
-                  {" "}
-                  Guess it first to win, but beware the unknown.
-                </p>
-                <div className="border-t border-b border-[#EED88D70] py-2">
-                  <div>
-                    <p className="font-bold">Objective:</p>
-                    <p>
-                      Uncover the hidden number in the selected range before
-                      your opponent.
-                    </p>
-                  </div>
-                  <div>
-                    <p className="flex items-center font-bold">
-                      Multiplier of Shadows:{" "}
-                      <img src={orb} className="ml-3 mr-1" /> X20
-                    </p>
-                    <p>
-                      Each wrong guess weakens the Multiplier. The higher the
-                      Multiplier when yo guess correctly, the higher your score.
-                    </p>
-                  </div>
-                  <div>
-                    <p className="font-bold">Victory:</p>
-                    <p>
-                      The first to guess correctly wins. Your score depends on
-                      your Multiplier and remaining attempts.
-                    </p>
-                  </div>
+                <div className="flex gap-4 mb-8">
+                  {["objective", "multiplier", "victory"].map((tab) => (
+                    <button
+                      key={tab}
+                      onClick={() => setActiveRuleTab(tab)}
+                      className={`px-4 py-2 rounded-lg ${
+                        activeRuleTab === tab
+                          ? "bg-[#FFF5E4]/20 text-[#FFF5E4]"
+                          : "text-[#FFF5E4]/60 hover:text-[#FFF5E4]"
+                      }`}
+                    >
+                      {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                    </button>
+                  ))}
                 </div>
-                <p className="italic text-center">
-                  Will you uncover the secret number before the darkness takes
-                  over?
-                </p>
+
+                <AnimatePresence mode="wait">
+                  {activeRuleTab === "objective" && (
+                    <motion.div
+                      key="objective"
+                      variants={tabContentVariants}
+                      initial="hidden"
+                      animate="visible"
+                      exit="exit"
+                      className="text-[#FFF5E4]/80 max-w-md"
+                    >
+                      <div className="space-y-4">
+                        <p className="italic">
+                          The darkness whispers you challenge.
+                        </p>
+                        <p className="italic">
+                          A secret number hides in the shadows.
+                        </p>
+                        <p>
+                          Uncover the hidden number in the selected range before
+                          your opponent.
+                        </p>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {activeRuleTab === "multiplier" && (
+                    <motion.div
+                      key="multiplier"
+                      variants={tabContentVariants}
+                      initial="hidden"
+                      animate="visible"
+                      exit="exit"
+                      className="text-[#FFF5E4]/80 max-w-md"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold">
+                          Multiplier of Shadows:
+                        </span>
+                        <img src={orb} className="h-6" />
+                        <span>X1.7</span>
+                      </div>
+                      <p>
+                        Each wrong guess weakens the Multiplier. The higher the
+                        Multiplier when you guess correctly, the higher your
+                        score.
+                      </p>
+                    </motion.div>
+                  )}
+
+                  {activeRuleTab === "victory" && (
+                    <motion.div
+                      key="victory"
+                      variants={tabContentVariants}
+                      initial="hidden"
+                      animate="visible"
+                      exit="exit"
+                      className="text-[#FFF5E4]/80 max-w-md"
+                    >
+                      <div className="space-y-4">
+                        <p>
+                          The first to guess correctly wins. Your score depends
+                          on your Multiplier and remaining attempts.
+                        </p>
+                        <p className="italic text-center mt-4">
+                          Will you uncover the secret number before the darkness
+                          takes over?
+                        </p>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+              <div className="flex items-center justify-center mt-16">
+                <motion.button
+                  onClick={backFromRules}
+                  className=" px-8 py-2 rounded-lg bg-[#FFF5E4]/10 hover:bg-[#FFF5E4]/20 text-[#FFF5E4] transition-all"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  Back
+                </motion.button>
               </div>
             </div>
           </motion.div>
-          <img
-            src={backB}
-            alt="Back button"
-            className="w-32 h-32 z-50  mt-[-70%] sm:mt-[-35%] object-contain cursor-pointer hover:opacity-80 transition-opacity"
-            onClick={backFromRules}
-          />
+        )}
+      </AnimatePresence>
+
+      {activeTab == "game" && <GuessingGame onBackToMenu={handleBackToMenu} />}
+
+      {/* Enhanced Confirmation Modal */}
+      {showConfirmation && (
+        <div className="fixed inset-0 bg-black/80 z-[1000] flex items-center justify-center">
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-black/90 p-8 rounded-xl border border-[#FFF5E4]/20 max-w-md w-full mx-4"
+          >
+            <h2 className="text-2xl text-center font-bold text-[#FFF5E4] mb-4">
+              Start Game?
+            </h2>
+
+            <div className="bg-[#FFF5E4]/5 rounded-lg p-4 mb-6">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-[#FFF5E4]/70">Current Balance:</span>
+                <span className="text-[#FFF5E4] font-bold text-lg">
+                  {user?.points || 0} points
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-[#FFF5E4]/70">Game Cost:</span>
+                <span className="text-red-400 font-bold text-lg">
+                  -5 points
+                </span>
+              </div>
+              <div className="mt-3 pt-3 border-t border-[#FFF5E4]/10">
+                <div className="flex justify-between items-center">
+                  <span className="text-[#FFF5E4]/70">Balance After:</span>
+                  <span className="text-[#FFF5E4] font-bold text-lg">
+                    {(user?.points || 0) - 5} points
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-4 justify-end">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setShowConfirmation(false)}
+                className="px-4 py-2 text-[#FFF5E4]/60 hover:text-[#FFF5E4]"
+              >
+                Cancel
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleStartGameConfirm}
+                disabled={!user || user.points < 5}
+                className="px-6 py-2 bg-[#FFF5E4]/10 hover:bg-[#FFF5E4]/20 text-[#FFF5E4] rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Start Game
+              </motion.button>
+            </div>
+          </motion.div>
         </div>
       )}
-      {activeTab == "game" && <GuessingGame onBackToMenu={handleBackToMenu} />}
     </section>
   );
 }

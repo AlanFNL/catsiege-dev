@@ -1,5 +1,4 @@
-import React, { useState, useRef } from "react";
-import { Menu, X } from "lucide-react";
+import React, { useRef } from "react";
 import {
   motion,
   useAnimationControls,
@@ -8,27 +7,6 @@ import {
 } from "framer-motion";
 import mainImg from "./assets/landing.webp";
 import circleArrow from "./assets/circlearrow.png";
-import logo from "./assets/logo.png";
-import { Link } from "react-scroll";
-
-const navItems = [
-  { name: "TOURNAMENT", target: "tournament" },
-  { name: "WHITELIST", target: "whitelist" },
-  { name: "ROADMAP", target: "roadmap" },
-  { name: "WHITEPAPER", target: "whitepaper" },
-  { name: "CONTACT", target: "contact" },
-];
-
-const navItemVariants = {
-  hidden: { opacity: 0, y: -20 },
-  visible: (i) => ({
-    opacity: 1,
-    y: 0,
-    transition: {
-      delay: 0.1 * i,
-    },
-  }),
-};
 
 const textLineVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -69,7 +47,6 @@ const TypewriterText = ({ text }) => {
 };
 
 export default function Hero() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const arrowRef = useRef(null);
   const { scrollYProgress } = useScroll({
     target: arrowRef,
@@ -83,7 +60,7 @@ export default function Hero() {
   return (
     <motion.div
       layout
-      className="relative min-h-screen bg-black text-[#FFF5E4]"
+      className="relative min-h-screen bg-black text-[#FFF5E4] pt-24 lg:pt-32"
     >
       {/* Background Image */}
       <div className="absolute inset-0 z-0">
@@ -98,63 +75,6 @@ export default function Hero() {
 
       {/* Content */}
       <div className="relative z-10 flex flex-col min-h-screen">
-        {/* Navbar */}
-        <motion.nav
-          className="p-4 lg:p-8 border-b border-[#FFF5E4]"
-          initial={{ opacity: 0, y: -50 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          viewport={{ once: false }}
-        >
-          <div className="flex items-center justify-between">
-            <img src={logo} alt="Logo" className="h-8 w-auto" />
-            <div className="hidden md:flex space-x-4 lg:space-x-8">
-              {navItems.map((item, index) => (
-                <motion.div
-                  key={item.name}
-                  variants={navItemVariants}
-                  initial="hidden"
-                  whileInView="visible"
-                  custom={index}
-                  viewport={{ once: false }}
-                >
-                  <Link
-                    to={item.target}
-                    smooth={true}
-                    duration={500}
-                    className="text-sm lg:text-base hover:text-gray-300 cursor-pointer"
-                  >
-                    {item.name}
-                  </Link>
-                </motion.div>
-              ))}
-            </div>
-            <button
-              className="md:hidden"
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-            >
-              {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
-          </div>
-          {/* Mobile Menu */}
-          {isMenuOpen && (
-            <div className="mt-4 flex flex-col space-y-2 md:hidden">
-              {navItems.map((item) => (
-                <Link
-                  key={item.name}
-                  to={item.target}
-                  smooth={true}
-                  duration={500}
-                  className="block py-2 text-sm hover:text-gray-300 cursor-pointer"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  {item.name}
-                </Link>
-              ))}
-            </div>
-          )}
-        </motion.nav>
-
         {/* Main Content */}
         <div className="flex-grow flex flex-col justify-end p-4 lg:p-12">
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end">

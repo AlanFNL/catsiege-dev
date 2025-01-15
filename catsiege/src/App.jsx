@@ -2,14 +2,25 @@ import { useEffect } from "react";
 import { scroller } from "react-scroll";
 import "./App.css";
 import Hero from "./Hero";
-import Second from "./Second";
 import Whitelist from "./Whitelist";
 import Fourth from "./Fourth";
 import Footer from "./Footer";
-
+import { AuthProvider } from "./contexts/AuthContext";
 import Tournament from "./components/Tournament";
 import Guess from "./components/Guess";
 import TournamentWinners from "./components/TournamentWinners";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+  Link,
+} from "react-router-dom";
+import Nav from "./Nav";
+import { PointsProvider } from "./contexts/PointsContext";
+import { WalletContextProvider } from "./contexts/WalletContext";
 
 function App() {
   useEffect(() => {
@@ -33,20 +44,41 @@ function App() {
   }, []);
 
   return (
-    <div className="overflow-x-hidden">
-      <Hero />
-      <div id="tournament">
-        <TournamentWinners />
-      </div>
-      <div id="whitelist">
-        <Whitelist />
-      </div>
+    <AuthProvider>
+      <PointsProvider>
+        <WalletContextProvider>
+          <Router>
+            <Routes>
+              <Route
+                path="/"
+                element={
+                  <div className="overflow-x-hidden">
+                    <Nav />
+                    <Hero />
+                    <div id="tournament">
+                      <TournamentWinners />
+                    </div>
+                    <div id="roadmap">
+                      <Whitelist />
+                    </div>
+                    <Guess />
 
-      <Fourth />
-      <div id="contact">
-        <Footer />
-      </div>
-    </div>
+                    <Fourth />
+                    <div id="contact">
+                      <Footer />
+                    </div>
+                  </div>
+                }
+              />
+
+              <Route path="/login" element={<Login />} />
+
+              <Route path="/register" element={<Register />} />
+            </Routes>
+          </Router>
+        </WalletContextProvider>
+      </PointsProvider>
+    </AuthProvider>
   );
 }
 

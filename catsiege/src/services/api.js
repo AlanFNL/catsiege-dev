@@ -1,10 +1,11 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:3001/api';
-
-export const api = axios.create({
-  baseURL: API_URL,
+const api = axios.create({
+  baseURL: 'https://catsiege-dev.onrender.com/api',
   withCredentials: true,
+  headers: {
+    'Content-Type': 'application/json',
+  }
 });
 
 export const authService = {
@@ -20,12 +21,16 @@ export const authService = {
 
   async login(email, password) {
     try {
-      console.log('Attempting login with:', { email, password: '***' }); // Debug log
+      console.log('Sending login request with:', { email, password: '***' });
       const response = await api.post('/auth/login', { email, password });
-      console.log('Login response:', response.data); // Debug log
+      console.log('Login response:', response.data);
       return response.data;
     } catch (error) {
-      console.error('Login error:', error.response || error);
+      console.error('Login error details:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message
+      });
       throw error.response?.data || { message: 'Network error' };
     }
   },
