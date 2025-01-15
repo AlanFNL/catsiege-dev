@@ -81,13 +81,33 @@ export const authService = {
     }
   },
 
-  async claimQuest(questId) {
+  claimQuest: async (questId) => {
     try {
-      const response = await api.post('/user/quests/claim', { questId });
-      return response.data;
+      const token = localStorage.getItem('tokenCat');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      const response = await fetch('/api/quests/claim', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ questId })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to claim quest');
+      }
+
+      const data = await response.json();
+      console.log('Quest claim response:', data);
+      return data;
     } catch (error) {
-      console.error('Claim quest error:', error);
-      throw error.response?.data || { message: 'Network error' };
+      console.error('Error claiming quest:', error);
+      throw error;
     }
   },
 

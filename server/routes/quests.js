@@ -148,4 +148,62 @@ router.post('/user/quests/claim', isAuthenticated, async (req, res) => {
   }
 });
 
+router.post('/claim', isAuthenticated, async (req, res) => {
+  try {
+    const { questId } = req.body;
+    console.log('Claiming quest:', { userId: req.userId, questId });
+
+    const user = await User.findById(req.userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Check if quest is already completed (for one-time quests)
+    const isCompleted = user.completedQuests.some(q => q.questId === questId);
+    if (isCompleted && questId !== 'DAILY_LOGIN') {
+      return res.status(400).json({ message: 'Quest already completed' });
+    }
+
+    // Special handling for NFT holder quest
+    if (questId === 'NFT_HOLDER') {
+      if (!user.quests?.nftVerified) {
+        return res.status(400).json({ message: 'NFT not verified' });
+      }
+    }
+
+    // Add quest to completed quests
+    const completedQuest = {
+      questId,
+      completedAt: new Date(),
+      lastClaim: new Date()
+    };
+
+    user.completedQuests.push(completedQuest);
+
+    // Update points
+    const questPoints = QUESTS[questId]?.points || 0;
+    user.points += questPoints;
+
+    // For NFT holder quest, mark it as claimed
+    if (questId === 'NFT_HOLDER') {
+      user.quests.nftHolder = true;
+    }
+
+    await user.save();
+    console.log('Quest claimed successfully:', {
+      questId,
+      points: questPoints,
+      totalPoints: user.points
+    });
+
+    res.json({
+      completedQuests: user.completedQuests,
+      totalPoints: user.points
+    });
+  } catch (error) {
+    console.error('Error claiming quest:', error);
+    res.status(500).json({ message: 'Error claiming quest' });
+  }
+});
+
 module.exports = router;

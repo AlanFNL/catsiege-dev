@@ -32,7 +32,7 @@ const QUESTS = {
 };
 
 export function PointsProvider({ children }) {
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
   const [completedQuests, setCompletedQuests] = useState([]);
   const [questTimers, setQuestTimers] = useState({});
   const { nftVerified, walletAddress } = useNFTStatus();
@@ -136,10 +136,22 @@ export function PointsProvider({ children }) {
   };
 
   const claimQuest = async (questId) => {
-    if (!canClaimQuest(questId)) return;
+    console.log("Attempting to claim quest:", {
+      questId,
+      canClaim: canClaimQuest(questId),
+      nftVerified,
+      walletAddress,
+      isCompleted: isQuestCompleted(questId),
+    });
+
+    if (!canClaimQuest(questId)) {
+      console.log("Cannot claim quest - conditions not met");
+      return;
+    }
 
     try {
       const response = await authService.claimQuest(questId);
+      console.log("Claim quest response:", response);
 
       // Update completed quests and timers
       setCompletedQuests(response.completedQuests);
@@ -157,10 +169,12 @@ export function PointsProvider({ children }) {
       }
 
       // Update user points
-      setUser((prevUser) => ({
-        ...prevUser,
-        points: Number(response.totalPoints.toFixed(2)),
-      }));
+      if (setUser && response.totalPoints !== undefined) {
+        setUser((prevUser) => ({
+          ...prevUser,
+          points: Number(response.totalPoints.toFixed(2)),
+        }));
+      }
 
       return response;
     } catch (error) {
