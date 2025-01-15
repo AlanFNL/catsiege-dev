@@ -21,23 +21,23 @@ export function useNFTVerification() {
     console.log("Verifying NFTs for wallet:", publicKey.toString());
 
     try {
-      // Get all NFTs for the connected wallet from mainnet
       const nfts = await getParsedNftAccountsByOwner({
         publicAddress: publicKey.toString(),
         connection: CONNECTION,
       });
 
-      console.log("Found NFTs:", nfts);
+      console.log("Found NFTs:", JSON.stringify(nfts, null, 2));
 
-      // Check if any NFT belongs to our collection
-      const hasCollectionNFT = nfts.some(nft => 
-        nft.updateAuthority === COLLECTION_ADDRESS.toString() ||
-        nft.data.creators?.some(creator => 
-          creator.address === COLLECTION_ADDRESS.toString()
-        )
-      );
+      // Check if any NFT belongs to our collection by checking collection.key
+      const hasCollectionNFT = nfts.some(nft => {
+        console.log("Checking NFT:", nft.mint);
+        console.log("Collection data:", nft.collection);
+        
+        return nft.collection && 
+               nft.collection.key === COLLECTION_ADDRESS.toString();
+      });
 
-      console.log("Has collection NFT:", hasCollectionNFT);
+      console.log("Has CatSiege Zero NFT:", hasCollectionNFT);
       setHasNFT(hasCollectionNFT);
       return hasCollectionNFT;
 
