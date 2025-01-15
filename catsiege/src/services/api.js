@@ -102,7 +102,7 @@ export const authService = {
     try {
       console.log('Attempting to claim quest with ID:', questId);
       
-      const response = await api.post('/quests/claim', { questId });
+      const response = await api.post('/user/quests/claim', { questId });
       console.log('Raw quest claim response:', response.data);
       
       // Map the response data to ensure consistent structure
