@@ -1,12 +1,10 @@
 import React, { useState, useRef } from "react";
 import orb from "../assets/guess-start4.png";
-import { ArrowLeft } from "lucide-react";
 import GuessingGame from "./GuessGame";
-import bg from "../assets/guess-start11.webp";
-import button1 from "../assets/guess-start-b.webp";
-import button2 from "../assets/guess-start-b2.webp";
+
+import example from "../assets/screen.webp";
 import { motion, AnimatePresence } from "framer-motion";
-import backB from "../assets/guess-game8.png";
+
 import bgMusic from "../assets/guess-game-music.mp3";
 import { useAuth } from "../contexts/AuthContext";
 import { authService } from "../services/api";
@@ -136,7 +134,7 @@ function Guess() {
             className="flex justify-center flex-col items-center"
           >
             <div className="relative w-[90vw] sm:w-[600px] h-[80vh] bg-black/50 backdrop-blur-sm rounded-xl border border-[#FFF5E4]/20 p-8">
-              <div className="flex flex-col items-center">
+              <div className="flex flex-col items-center  h-[85%]">
                 <h1 className="text-3xl font-bold text-[#FFF5E4] mb-8">
                   RULES
                 </h1>
@@ -168,16 +166,16 @@ function Guess() {
                       className="text-[#FFF5E4]/80 max-w-md"
                     >
                       <div className="space-y-4">
-                        <p className="italic">
-                          The darkness whispers you challenge.
+                        <p className="italic text-lg text-center">
+                          The darkness whispers you challenge, a secret number
+                          hides in the shadows.
                         </p>
-                        <p className="italic">
-                          A secret number hides in the shadows.
-                        </p>
-                        <p>
+
+                        <p className="text-lg bold text-center">
                           Uncover the hidden number in the selected range before
                           your opponent.
                         </p>
+                        <img src={example} className="rounded" />
                       </div>
                     </motion.div>
                   )}
@@ -192,13 +190,13 @@ function Guess() {
                       className="text-[#FFF5E4]/80 max-w-md"
                     >
                       <div className="flex items-center gap-2">
-                        <span className="font-bold">
+                        <span className="font-bold text-2xl ">
                           Multiplier of Shadows:
                         </span>
-                        <img src={orb} className="h-6" />
-                        <span>X1.7</span>
+                        <img src={orb} className="h-8" />
+                        <span className="font-bold text-2xl">X1.7</span>
                       </div>
-                      <p>
+                      <p className="text-lg mt-8">
                         Each wrong guess weakens the Multiplier. The higher the
                         Multiplier when you guess correctly, the higher your
                         score.
@@ -216,11 +214,11 @@ function Guess() {
                       className="text-[#FFF5E4]/80 max-w-md"
                     >
                       <div className="space-y-4">
-                        <p>
+                        <p className="text-center text-xl">
                           The first to guess correctly wins. Your score depends
                           on your Multiplier and remaining attempts.
                         </p>
-                        <p className="italic text-center mt-4">
+                        <p className="italic text-center text-lg mt-4">
                           Will you uncover the secret number before the darkness
                           takes over?
                         </p>
