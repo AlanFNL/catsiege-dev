@@ -189,17 +189,19 @@ function Guess() {
                       exit="exit"
                       className="text-[#FFF5E4]/80 max-w-md"
                     >
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 text-center justify-center">
                         <span className="font-bold text-2xl ">
                           Multiplier of Shadows:
                         </span>
                         <img src={orb} className="h-8" />
                         <span className="font-bold text-2xl">X1.7</span>
                       </div>
-                      <p className="text-lg mt-8">
-                        Each wrong guess weakens the Multiplier. The higher the
-                        Multiplier when you guess correctly, the higher your
-                        score.
+                      <p className="text-lg mt-8 text-center">
+                        Each wrong guess weakens the Multiplier.
+                      </p>
+                      <p className="text-lg mt-4 text-center">
+                        The higher the Multiplier when you guess correctly, the
+                        higher your reward.
                       </p>
                     </motion.div>
                   )}
@@ -215,7 +217,7 @@ function Guess() {
                     >
                       <div className="space-y-4">
                         <p className="text-center text-xl">
-                          The first to guess correctly wins. Your score depends
+                          The first to guess correctly wins. Your reward depends
                           on your Multiplier and remaining attempts.
                         </p>
                         <p className="italic text-center text-lg mt-4">
