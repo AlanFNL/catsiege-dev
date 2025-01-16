@@ -44,7 +44,6 @@ export default function Login() {
         formData.email,
         formData.password
       );
-      console.log("Server response:", response);
 
       // Store token first
       if (response.token) {

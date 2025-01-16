@@ -99,13 +99,6 @@ export function PointsProvider({ children }) {
   };
 
   const canClaimQuest = (questId) => {
-    console.log("Checking quest claimability:", {
-      questId,
-      user,
-      nftVerified: user?.quests?.nftVerified,
-      completedQuests: user?.completedQuests,
-    });
-
     const quest = QUESTS[questId];
     if (!quest) return false;
 
@@ -114,13 +107,6 @@ export function PointsProvider({ children }) {
       const isVerified = user?.quests?.nftVerified === true;
       const hasWallet = Boolean(user?.walletAddress);
       const notCompleted = !isQuestCompleted(questId);
-
-      console.log("NFT Quest Status:", {
-        isVerified,
-        hasWallet,
-        notCompleted,
-        canClaim: isVerified && hasWallet && notCompleted,
-      });
 
       return isVerified && hasWallet && notCompleted;
     }
@@ -141,20 +127,12 @@ export function PointsProvider({ children }) {
   };
 
   const claimQuest = async (questId) => {
-    console.log("Attempting to claim quest:", {
-      questId,
-      canClaim: canClaimQuest(questId),
-      user,
-    });
-
     if (!canClaimQuest(questId)) {
-      console.log("Cannot claim quest - conditions not met");
       return;
     }
 
     try {
       const response = await authService.claimQuest(questId);
-      console.log("Quest claim response:", response);
 
       // Update completed quests
       if (response.completedQuests) {

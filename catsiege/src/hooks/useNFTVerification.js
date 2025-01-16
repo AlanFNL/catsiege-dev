@@ -18,10 +18,7 @@ export function useNFTVerification() {
         throw new Error('No authentication token found');
       }
 
-      console.log('Updating quest status with:', {
-        verified: true,
-        walletAddress: publicKey.toString()
-      });
+     
 
       const response = await fetch('https://catsiege-dev.onrender.com/api/user/quests/nft-holder', {
         method: 'POST',
@@ -42,7 +39,7 @@ export function useNFTVerification() {
         throw new Error(data.message || 'Failed to update quest status');
       }
 
-      console.log('Quest status updated successfully:', data);
+    
       
       // Force refresh user data
       await fetch('https://catsiege-dev.onrender.com/api/user/me', {
@@ -60,12 +57,12 @@ export function useNFTVerification() {
 
   const verifyNFTOwnership = useCallback(async () => {
     if (!publicKey) {
-      console.log("No wallet connected");
+
       return false;
     }
 
     setIsVerifying(true);
-    console.log("Verifying NFTs for wallet:", publicKey.toString());
+   
 
     try {
       const response = await fetch(QUICKNODE_RPC, {
@@ -89,7 +86,7 @@ export function useNFTVerification() {
       });
 
       const data = await response.json();
-      console.log("QuickNode response:", data);
+     
 
       if (data.error) {
         throw new Error(`QuickNode error: ${data.error.message}`);
@@ -103,7 +100,7 @@ export function useNFTVerification() {
         );
       });
 
-      console.log("Has CatSiege Zero NFT:", hasCollectionNFT);
+   
       setHasNFT(hasCollectionNFT);
 
       if (hasCollectionNFT) {

@@ -17,12 +17,10 @@ export function AuthProvider({ children }) {
   const checkAuth = useCallback(async () => {
     if (isCheckingAuth) return;
 
-    console.log("Checking auth...");
     setIsCheckingAuth(true);
 
     try {
       const token = localStorage.getItem("tokenCat");
-      console.log("Token found:", !!token);
 
       if (!token) {
         setLoading(false);
@@ -30,11 +28,9 @@ export function AuthProvider({ children }) {
       }
 
       const userData = await authService.me();
-      console.log("Auth check response userData:", userData);
 
       if (userData) {
         setUser(userData);
-        console.log("User set:", userData);
       }
     } catch (error) {
       console.error("Auth check failed:", error);
@@ -56,7 +52,6 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = async (userData) => {
-    console.log("Setting user data in login:", userData);
     setUser(userData);
   };
 

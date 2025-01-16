@@ -45,28 +45,10 @@ export default function Rewards({ isOpen, onClose }) {
   const [claimingQuest, setClaimingQuest] = useState(null);
 
   const getQuestStatus = (quest) => {
-    console.log("Quest status check:", {
-      quest,
-      user,
-      completedQuests,
-      nftVerified: user?.quests?.nftVerified,
-      walletConnected: connected,
-      hasWallet: Boolean(user?.walletAddress),
-    });
-
     if (quest.id === "NFT_HOLDER") {
-      console.log("NFT holder quest check:", {
-        connected,
-        isCompleted: isQuestCompleted(quest.id),
-        nftVerified: verifyNFTStatus(),
-      });
-
       if (!connected) return "connect_wallet";
       if (isQuestCompleted(quest.id)) return "completed";
       if (verifyNFTStatus()) {
-        console.log(
-          "NFT is verified via localStorage, quest should be claimable"
-        );
         return "claimable";
       }
       return "locked";
@@ -111,14 +93,8 @@ export default function Rewards({ isOpen, onClose }) {
 
     try {
       setClaimingQuest(questId);
-      console.log("Attempting to claim quest:", {
-        questId,
-        user,
-        canClaim: canClaimQuest(questId),
-      });
 
       await claimQuest(questId);
-      console.log("Quest claimed successfully");
     } catch (error) {
       console.error("Failed to claim quest:", error);
     } finally {

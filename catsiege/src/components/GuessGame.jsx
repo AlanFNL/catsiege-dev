@@ -63,7 +63,7 @@ const GuessingGame = ({ onBackToMenu }) => {
   const MAX_TURNS = 15;
   const [timeLeft, setTimeLeft] = useState(10);
   const [timerActive, setTimerActive] = useState(false);
-  const TURN_TIME_LIMIT = 999; // seconds
+  const TURN_TIME_LIMIT = 15; // seconds
   const [currentMultiplier, setCurrentMultiplier] = useState(
     TURN_MULTIPLIERS[0]
   );
@@ -161,23 +161,8 @@ const GuessingGame = ({ onBackToMenu }) => {
     // Update multiplier based on player turns
     const newMultiplier = TURN_MULTIPLIERS[playerTurns] || TURN_MULTIPLIERS[0];
 
-    console.log("Debug - Multiplier Update:", {
-      playerTurns,
-      newMultiplier,
-      previousMultiplier: currentMultiplier,
-    });
-
     setCurrentMultiplier(newMultiplier);
   }, [playerTurns]);
-
-  // Track when multiplier changes
-  useEffect(() => {
-    console.log("Debug - Current Multiplier:", {
-      multiplier: currentMultiplier,
-      playerTurns,
-      totalTurns: turns,
-    });
-  }, [currentMultiplier]);
 
   // Calculate winnings with decimal precision
   const calculateWinnings = () => {
@@ -188,41 +173,18 @@ const GuessingGame = ({ onBackToMenu }) => {
     // Round down to 2 decimal places
     const roundedWinnings = Math.floor(exactWinnings * 100) / 100;
 
-    console.log("Debug - Winnings calculation:", {
-      baseAmount: ENTRY_PRICE,
-      multiplier: currentMultiplier,
-      exactWinnings,
-      roundedWinnings,
-      playerTurns,
-    });
-
     return roundedWinnings;
   };
 
   const handleGameEnd = async (hasWon) => {
-    console.log("Debug - Game End Called:", {
-      hasWon,
-      currentMultiplier,
-      turns,
-      userPoints: user?.points,
-    });
-
     if (hasWon && user) {
       try {
         const previousBalance = user.points;
         const winnings = calculateWinnings();
 
-        console.log("Debug - Processing win:", {
-          previousBalance,
-          winnings,
-          currentMultiplier,
-        });
-
         if (winnings > 0) {
           // Update points via API
           const response = await authService.updatePoints(winnings);
-
-          console.log("Debug - API Response:", response);
 
           // Update final points state
           setFinalPoints({
@@ -258,28 +220,6 @@ const GuessingGame = ({ onBackToMenu }) => {
     setStage("result");
   };
 
-  // Update finalPoints immediately when user or multiplier changes
-  useEffect(() => {
-    if (user && currentMultiplier) {
-      console.log("Debug - State Update:", {
-        userPoints: user.points,
-        currentMultiplier,
-        finalPoints,
-      });
-    }
-  }, [user, currentMultiplier, finalPoints]);
-
-  // Add this to track when the game ends
-  useEffect(() => {
-    if (gameOver) {
-      console.log("Debug - Game Over State:", {
-        currentMultiplier,
-        finalPoints,
-        userPoints: user?.points,
-      });
-    }
-  }, [gameOver]);
-
   const handleGuess = (guess, isCpu = false) => {
     const numericGuess = parseInt(guess, 10);
 
@@ -291,12 +231,6 @@ const GuessingGame = ({ onBackToMenu }) => {
         const turnMultiplier =
           TURN_MULTIPLIERS[newPlayerTurns] || TURN_MULTIPLIERS[0];
         setCurrentMultiplier(turnMultiplier);
-
-        console.log("Debug - Player turn increment:", {
-          newPlayerTurns,
-          turnMultiplier,
-          isCpuTurn: isCpu,
-        });
 
         return newPlayerTurns;
       });
@@ -312,13 +246,6 @@ const GuessingGame = ({ onBackToMenu }) => {
     if (numericGuess === secretNumber) {
       // Use current player turns for multiplier (since we already incremented)
       const finalMultiplier = TURN_MULTIPLIERS[playerTurns];
-
-      console.log("Debug - Correct guess:", {
-        guess: numericGuess,
-        secretNumber,
-        playerTurns,
-        finalMultiplier,
-      });
 
       setCurrentMultiplier(finalMultiplier);
       handleGameEnd(true);
@@ -402,32 +329,11 @@ const GuessingGame = ({ onBackToMenu }) => {
     onBackToMenu();
   };
 
-  // Track when the correct number is guessed
-  useEffect(() => {
-    if (userGuess && parseInt(userGuess) === secretNumber) {
-      console.log("Debug - Number matched:", {
-        guess: userGuess,
-        secretNumber,
-        currentMultiplier,
-      });
-    }
-  }, [userGuess, secretNumber, currentMultiplier]);
-
   // Initialize game
   useEffect(() => {
     // Start with first turn multiplier (index 0)
     setCurrentMultiplier(TURN_MULTIPLIERS[0]);
   }, []);
-
-  // Remove the separate multiplier effect since we're handling it in handleGuess
-  useEffect(() => {
-    console.log("Debug - Current Game State:", {
-      playerTurns,
-      totalTurns: turns,
-      currentMultiplier,
-      finalPoints,
-    });
-  }, [playerTurns, turns, currentMultiplier, finalPoints]);
 
   // Add button cooldown after guess
   const handleGuessWithCooldown = () => {

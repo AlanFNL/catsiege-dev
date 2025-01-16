@@ -21,9 +21,9 @@ export const authService = {
 
   async login(email, password) {
     try {
-      console.log('Sending login request with:', { email, password: '***' });
+     
       const response = await api.post('/auth/login', { email, password });
-      console.log('Login response:', response.data);
+    
       return response.data;
     } catch (error) {
       console.error('Login error details:', {
@@ -38,14 +38,14 @@ export const authService = {
   async me() {
     try {
       const token = localStorage.getItem('tokenCat');
-      console.log('API: Fetching user data with token:', !!token);
+      
       
       if (!token) {
         throw new Error('No token found');
       }
 
       const response = await api.get('/user/me');
-      console.log('Raw response from /me:', response.data);
+    
       
       const userData = {
         id: response.data.id || response.data._id,
@@ -64,7 +64,7 @@ export const authService = {
         })) || []
       };
 
-      console.log('API: Mapped user data:', userData);
+    
       return userData;
     } catch (error) {
       console.error('Me error:', error.response || error);
@@ -100,10 +100,10 @@ export const authService = {
 
   claimQuest: async (questId) => {
     try {
-      console.log('Attempting to claim quest with ID:', questId);
+     
       
       const response = await api.post('/user/quests/claim', { questId });
-      console.log('Raw quest claim response:', response.data);
+      
       
       // Map the response data to ensure consistent structure
       const mappedResponse = {
@@ -121,7 +121,7 @@ export const authService = {
         }
       };
 
-      console.log('Quest claim mapped response:', mappedResponse);
+     
       return mappedResponse;
     } catch (error) {
       console.error('Error claiming quest:', {
@@ -166,7 +166,7 @@ export const authService = {
           nftHolder: response.data.quests?.nftHolder || false
         }
       };
-      console.log('NFT status response:', nftStatus);
+     
       return nftStatus;
     } catch (error) {
       console.error('Get NFT status error:', error);

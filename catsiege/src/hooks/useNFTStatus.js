@@ -27,7 +27,7 @@ export function useNFTStatus() {
       }
 
       const data = await response.json();
-      console.log('NFT status response:', data);
+   
       
       setNFTStatus({
         nftVerified: data.nftVerified,
