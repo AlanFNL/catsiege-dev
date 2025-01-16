@@ -138,9 +138,18 @@ const GuessingGame = ({ onBackToMenu }) => {
 
     // Handle time running out
     if (timeLeft === 0 && !isCpuTurn) {
-      const newMultiplier = multiplier / 2;
-      setMultiplier(newMultiplier);
-      setIsCpuTurn(true);
+      // Generate random guess within current range
+      const randomGuess =
+        Math.floor(Math.random() * (maxRange - minRange + 1)) + minRange;
+
+      // Update user's guess display
+      setUserGuess(randomGuess.toString());
+
+      // Handle the guess
+      handleGuess(randomGuess);
+
+      // Reset timer and switch turns
+      setTimeLeft(TURN_TIME_LIMIT);
       setTimerActive(false);
     }
 
@@ -149,7 +158,7 @@ const GuessingGame = ({ onBackToMenu }) => {
         clearInterval(timerId);
       }
     };
-  }, [timeLeft, timerActive, isCpuTurn, gameOver]);
+  }, [timeLeft, timerActive, isCpuTurn, gameOver, minRange, maxRange]);
 
   // Initialize timer when component mounts
   useEffect(() => {

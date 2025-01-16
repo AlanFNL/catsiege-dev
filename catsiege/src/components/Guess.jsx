@@ -29,6 +29,7 @@ function Guess() {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const { user, setUser } = useAuth();
   const [activeRuleTab, setActiveRuleTab] = useState("objective");
+  const [isStartLoading, setIsStartLoading] = useState(false);
 
   audioRef.current.volume = 0.2;
   audioRef.current.loop = true;
@@ -56,6 +57,7 @@ function Guess() {
 
   const handleStartGameConfirm = async () => {
     try {
+      setIsStartLoading(true);
       // Deduct 5 points via API
       const response = await authService.updatePoints(-5);
 
@@ -73,6 +75,8 @@ function Guess() {
       });
     } catch (error) {
       console.error("Failed to start game:", error);
+    } finally {
+      setIsStartLoading(false);
     }
   };
 
@@ -290,10 +294,17 @@ function Guess() {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={handleStartGameConfirm}
-                disabled={!user || user.points < 5}
+                disabled={!user || user.points < 5 || isStartLoading}
                 className="px-6 py-2 bg-[#FFF5E4]/10 hover:bg-[#FFF5E4]/20 text-[#FFF5E4] rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Start Game
+                {isStartLoading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-[#FFF5E4]/20 border-t-[#FFF5E4] rounded-full animate-spin" />
+                    <span>Loading...</span>
+                  </div>
+                ) : (
+                  "Start Game"
+                )}
               </motion.button>
             </div>
           </motion.div>

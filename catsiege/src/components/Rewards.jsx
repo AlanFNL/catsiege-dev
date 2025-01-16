@@ -46,9 +46,17 @@ export default function Rewards({ isOpen, onClose }) {
 
   const getQuestStatus = (quest) => {
     if (quest.id === "NFT_HOLDER") {
+      // First check if it's already completed
+      if (completedQuests?.some((q) => q.questId === "NFT_HOLDER")) {
+        return "completed";
+      }
+
+      // Then check other conditions
       if (!connected) return "connect_wallet";
-      if (isQuestCompleted(quest.id)) return "completed";
       if (verifyNFTStatus()) {
+        console.log(
+          "NFT is verified via localStorage, quest should be claimable"
+        );
         return "claimable";
       }
       return "locked";
