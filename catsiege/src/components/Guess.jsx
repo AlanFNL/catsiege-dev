@@ -279,12 +279,12 @@ function Guess() {
               </div>
             </div>
 
-            <div className="flex gap-4 justify-end">
+            <div className="flex gap-4 justify-evenly">
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setShowConfirmation(false)}
-                className="px-4 py-2 text-[#FFF5E4]/60 hover:text-[#FFF5E4]"
+                className="px-4 py-2 font-bold text-[#FFF5E4]/60 hover:text-[#FFF5E4]"
               >
                 Cancel
               </motion.button>
@@ -293,7 +293,7 @@ function Guess() {
                 whileTap={{ scale: 0.95 }}
                 onClick={handleStartGameConfirm}
                 disabled={!user || user.points < 5 || isStartLoading}
-                className="px-6 py-2 bg-[#FFF5E4]/10 hover:bg-[#FFF5E4]/20 text-[#FFF5E4] rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-6 py-2 font-bold bg-[#FFF5E4]/10 hover:bg-[#FFF5E4]/20 text-[#FFF5E4] rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isStartLoading ? (
                   <div className="flex items-center gap-2">
