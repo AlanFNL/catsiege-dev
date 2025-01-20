@@ -2,10 +2,10 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 const GameStat = require('../gameSchema');
-const { authenticateToken } = require('../middleware/auth');
+const { isAuthenticated } = require('../middleware/auth');
 
 // Record a new game result
-router.post('/game-stats', authenticateToken, async (req, res) => {
+router.post('/game-stats', isAuthenticated, async (req, res) => {
   try {
     const { turnsToWin, endingMultiplier } = req.body;
     const userId = req.user._id;
@@ -36,7 +36,7 @@ router.post('/game-stats', authenticateToken, async (req, res) => {
 });
 
 // Get game statistics for a user
-router.get('/game-stats', authenticateToken, async (req, res) => {
+router.get('/game-stats', isAuthenticated, async (req, res) => {
   try {
     const userId = req.user._id;
     
