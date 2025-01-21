@@ -1,3 +1,5 @@
+const User = require('../userSchema');
+
 const isAdmin = async (req, res, next) => {
   try {
     if (!req.userId) {

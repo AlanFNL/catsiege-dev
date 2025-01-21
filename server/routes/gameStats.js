@@ -76,14 +76,12 @@ router.get('/game-stats', isAuthenticated, async (req, res) => {
 // Get game statistics for admin
 router.get('/game-stats', isAuthenticated, isAdmin, async (req, res) => {
   try {
-    const userId = req.userId;
-    
     // Get total games played
     const totalGames = await GameStat.countDocuments();
     
     // Get recent games
     const recentGames = await GameStat.find()
-      .sort({ timestamp: -1 })
+      .sort({ createdAt: -1 })  // Changed from timestamp to createdAt
       .limit(15)
       .lean();
     
@@ -94,22 +92,28 @@ router.get('/game-stats', isAuthenticated, isAdmin, async (req, res) => {
           _id: null,
           avgRoi: { $avg: '$roi' },
           avgTurns: { $avg: '$turnsToWin' },
-          avgMultiplier: { $avg: '$endingMultiplier' },
-          totalPointsWon: { $sum: '$pointsWon' }
+          avgMultiplier: { $avg: '$endingMultiplier' }
         }
       }
     ]);
 
-    res.json({
+    // Format the response
+    const formattedResponse = {
       totalGames,
-      recentGames,
+      recentGames: recentGames.map(game => ({
+        ...game,
+        roi: Number(game.roi.toFixed(2)),
+        endingMultiplier: Number(game.endingMultiplier.toFixed(2)),
+        timestamp: game.createdAt || game.timestamp // Fallback for timestamp
+      })),
       statistics: stats[0] || {
         avgRoi: 0,
         avgTurns: 0,
-        avgMultiplier: 0,
-        totalPointsWon: 0
+        avgMultiplier: 0
       }
-    });
+    };
+
+    res.json(formattedResponse);
   } catch (error) {
     console.error('Error fetching game stats:', error);
     res.status(500).json({ message: 'Failed to fetch game statistics' });
