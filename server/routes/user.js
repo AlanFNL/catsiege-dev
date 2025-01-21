@@ -24,6 +24,7 @@ router.get('/me', isAuthenticated, async (req, res) => {
       email: user.email,
       walletAddress: user.walletAddress || null,
       points: user.points || 0,
+      isAdmin: user.isAdmin || false,
       quests: {
         nftVerified: user.quests?.nftVerified || false,
         nftHolder: user.quests?.nftHolder || false
