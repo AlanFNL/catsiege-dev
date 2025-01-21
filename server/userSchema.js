@@ -23,9 +23,9 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: null,
   },
-  admin: {
+  isAdmin: {
     type: Boolean,
-
+    default: false
   },
   completedQuests: [{
     questId: String,
