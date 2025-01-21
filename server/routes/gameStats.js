@@ -79,13 +79,14 @@ router.get('/game-stats', isAuthenticated, isAdmin, async (req, res) => {
     // Get total games played
     const totalGames = await GameStat.countDocuments();
     
-    // Get recent games
+    // Get recent games with user info
     const recentGames = await GameStat.find()
+      .populate('userId', 'email')
       .sort({ timestamp: -1 })
       .limit(15)
       .lean();
     
-    // Get average stats - removed userId match since we want all games
+    // Get average stats
     const stats = await GameStat.aggregate([
       {
         $group: {
@@ -97,18 +98,21 @@ router.get('/game-stats', isAuthenticated, isAdmin, async (req, res) => {
       }
     ]);
 
-    // Format the response
+    // Format the response with proper number formatting
     const formattedResponse = {
       totalGames,
       recentGames: recentGames.map(game => ({
-        ...game,
+        _id: game._id,
+        timestamp: game.timestamp,
+        turnsToWin: game.turnsToWin,
+        endingMultiplier: Number(game.endingMultiplier.toFixed(2)),
         roi: Number(game.roi.toFixed(2)),
-        endingMultiplier: Number(game.endingMultiplier.toFixed(2))
+        userEmail: game.userId?.email || 'Unknown'
       })),
-      statistics: stats[0] || {
-        avgRoi: 0,
-        avgTurns: 0,
-        avgMultiplier: 0
+      statistics: {
+        avgRoi: Number((stats[0]?.avgRoi || 0).toFixed(2)),
+        avgTurns: Number((stats[0]?.avgTurns || 0).toFixed(1)),
+        avgMultiplier: Number((stats[0]?.avgMultiplier || 0).toFixed(2))
       }
     };
 
