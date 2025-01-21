@@ -8,12 +8,12 @@ const { isAuthenticated } = require('../middleware/auth');
 router.post('/game-stats', isAuthenticated, async (req, res) => {
   try {
     const { turnsToWin, endingMultiplier } = req.body;
-    const userId = req.user._id;
+    const userId = req.userId;
 
     // Calculate ROI
     const initialBet = 5;
-    const pointsWon = initialBet * endingMultiplier;
-    const roi = pointsWon - initialBet;
+    const pointsWon = Number((initialBet * endingMultiplier).toFixed(2));
+    const roi = Number((pointsWon - initialBet).toFixed(2));
 
     const gameStat = new GameStat({
       userId,
@@ -38,7 +38,7 @@ router.post('/game-stats', isAuthenticated, async (req, res) => {
 // Get game statistics for a user
 router.get('/game-stats', isAuthenticated, async (req, res) => {
   try {
-    const userId = req.user._id;
+    const userId = req.userId;
     
     // Get total games played
     const totalGames = await GameStat.countDocuments({ userId });
