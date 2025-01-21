@@ -1,5 +1,14 @@
 import React, { useState, useEffect } from "react";
-import { Menu, X, User, ChevronDown, Wallet, Gift, LogOut } from "lucide-react";
+import {
+  Menu,
+  X,
+  User,
+  ChevronDown,
+  Wallet,
+  Gift,
+  LogOut,
+  BarChart3,
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-scroll";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
@@ -140,7 +149,7 @@ export default function Nav() {
               <AnimatePresence>
                 {isDropdownOpen && (
                   <motion.div
-                    className="absolute right-0 mt-48 w-64 bg-black border border-[#FFF5E4] rounded-lg shadow-lg py-1 overflow-x-hidden"
+                    className="absolute right-0 mt-64 w-64 bg-black border border-[#FFF5E4] rounded-lg shadow-lg py-1 overflow-x-hidden"
                     variants={dropdownVariants}
                     initial="hidden"
                     animate="visible"
@@ -164,6 +173,16 @@ export default function Nav() {
                       <Wallet size={16} />
                       <span>Connect Wallet</span>
                     </button>
+                    {user.isAdmin && (
+                      <RouterLink
+                        to="/admin/dashboard"
+                        onClick={() => setIsDropdownOpen(false)}
+                        className="flex items-center space-x-2 w-full px-4 py-2 text-sm hover:bg-[#FFF5E4]/10"
+                      >
+                        <BarChart3 size={16} />
+                        <span>Admin Dashboard</span>
+                      </RouterLink>
+                    )}
                     <button
                       onClick={handleLogout}
                       className="flex items-center space-x-2 w-full px-4 py-2 text-sm hover:bg-[#FFF5E4]/10 text-red-400"

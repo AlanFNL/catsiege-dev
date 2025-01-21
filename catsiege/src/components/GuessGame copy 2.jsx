@@ -9,11 +9,10 @@ import catopponent from "../assets/catopponent.webp";
 import * as Slider from "@radix-ui/react-slider";
 
 import { useAuth } from "../contexts/AuthContext";
-
+import { authService } from "../services/api";
 import { Info, Volume2, VolumeX } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
 import * as Accordion from "@radix-ui/react-accordion";
-import { authService, gameService } from "../services/api";
 
 const TURN_MULTIPLIERS = {
   0: 1.7,
@@ -172,45 +171,39 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
   const calculateWinnings = () => {
     if (!currentMultiplier) return 0;
 
-    // Calculate total winnings (entry price * multiplier)
-    const totalWinnings = ENTRY_PRICE * currentMultiplier;
+    // Use precise multiplication
+    const exactWinnings = ENTRY_PRICE * currentMultiplier;
+    // Round down to 2 decimal places
+    const roundedWinnings = Math.floor(exactWinnings * 100) / 100;
 
-    // Calculate net winnings (total winnings - entry price)
-    const netWinnings = totalWinnings - ENTRY_PRICE;
-
-    // Round to 2 decimal places
-    return Number(netWinnings.toFixed(2));
+    return roundedWinnings;
   };
 
   const handleGameEnd = async (hasWon) => {
     if (hasWon && user) {
       try {
         const previousBalance = user.points;
-        const netWinnings = calculateWinnings(); // Now returns net winnings already
+        const winnings = calculateWinnings();
 
-        // First record game statistics
-        await gameService.recordGameStats({
-          turnsToWin: playerTurns,
-          endingMultiplier: currentMultiplier,
-        });
+        if (winnings > 0) {
+          // Update points via API
+          const response = await authService.updatePoints(winnings);
 
-        // Then update points with net winnings
-        const response = await authService.updatePoints(netWinnings);
+          // Update final points state
+          setFinalPoints({
+            previousBalance,
+            earned: winnings,
+            newBalance: response.points,
+          });
 
-        // Update final points state
-        setFinalPoints({
-          previousBalance,
-          earned: netWinnings,
-          newBalance: response.points,
-        });
-
-        // Update user context
-        setUser((prev) => ({
-          ...prev,
-          points: response.points,
-        }));
+          // Update user context
+          setUser((prev) => ({
+            ...prev,
+            points: response.points,
+          }));
+        }
       } catch (error) {
-        console.error("Failed to update points or record stats:", error);
+        console.error("Failed to update points:", error);
         setFinalPoints({
           previousBalance: user.points,
           earned: 0,
@@ -218,23 +211,12 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
         });
       }
     } else {
-      // Handle loss case
+      // Even if player didn't win, show their current balance
       setFinalPoints({
         previousBalance: user?.points || 0,
-        earned: -ENTRY_PRICE,
-        newBalance: (user?.points || 0) - ENTRY_PRICE,
+        earned: 0,
+        newBalance: user?.points || 0,
       });
-
-      // Update points to subtract entry fee for loss
-      try {
-        const response = await authService.updatePoints(-ENTRY_PRICE);
-        setUser((prev) => ({
-          ...prev,
-          points: response.points,
-        }));
-      } catch (error) {
-        console.error("Failed to update points for loss:", error);
-      }
     }
 
     setGameOver(true);

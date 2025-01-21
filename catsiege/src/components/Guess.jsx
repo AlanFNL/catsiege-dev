@@ -5,7 +5,7 @@ import GuessingGame from "./GuessGame";
 import example from "../assets/screen.webp";
 import { motion, AnimatePresence } from "framer-motion";
 
-import bgMusic from "../assets/guess-game-music.mp3";
+import bgMusic from "../assets/guess-music.mp3";
 import { useAuth } from "../contexts/AuthContext";
 import { authService } from "../services/api";
 
@@ -244,7 +244,9 @@ function Guess() {
         )}
       </AnimatePresence>
 
-      {activeTab == "game" && <GuessingGame onBackToMenu={handleBackToMenu} />}
+      {activeTab == "game" && (
+        <GuessingGame onBackToMenu={handleBackToMenu} audioRef={audioRef} />
+      )}
 
       {/* Enhanced Confirmation Modal */}
       {showConfirmation && (

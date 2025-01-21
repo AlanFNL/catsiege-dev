@@ -9,11 +9,10 @@ import catopponent from "../assets/catopponent.webp";
 import * as Slider from "@radix-ui/react-slider";
 
 import { useAuth } from "../contexts/AuthContext";
-
-import { Info, Volume2, VolumeX } from "lucide-react";
+import { authService } from "../services/api";
+import { Info } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
 import * as Accordion from "@radix-ui/react-accordion";
-import { authService, gameService } from "../services/api";
 
 const TURN_MULTIPLIERS = {
   0: 1.7,
@@ -39,7 +38,7 @@ const feedbackVariants = {
   exit: { opacity: 0, y: -20 },
 };
 
-const GuessingGame = ({ onBackToMenu, audioRef }) => {
+const GuessingGame = ({ onBackToMenu }) => {
   const [stage, setStage] = useState("playing");
   const [rangeMax] = useState(256);
   const [secretNumber, setSecretNumber] = useState(null);
@@ -72,7 +71,6 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
   const [playerTurns, setPlayerTurns] = useState(0);
   const [isGuessButtonDisabled, setIsGuessButtonDisabled] = useState(false);
   const [isInfoOpen, setIsInfoOpen] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
 
   // Reset game state when component mounts or when starting a new game
   const resetGame = () => {
@@ -172,45 +170,39 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
   const calculateWinnings = () => {
     if (!currentMultiplier) return 0;
 
-    // Calculate total winnings (entry price * multiplier)
-    const totalWinnings = ENTRY_PRICE * currentMultiplier;
+    // Use precise multiplication
+    const exactWinnings = ENTRY_PRICE * currentMultiplier;
+    // Round down to 2 decimal places
+    const roundedWinnings = Math.floor(exactWinnings * 100) / 100;
 
-    // Calculate net winnings (total winnings - entry price)
-    const netWinnings = totalWinnings - ENTRY_PRICE;
-
-    // Round to 2 decimal places
-    return Number(netWinnings.toFixed(2));
+    return roundedWinnings;
   };
 
   const handleGameEnd = async (hasWon) => {
     if (hasWon && user) {
       try {
         const previousBalance = user.points;
-        const netWinnings = calculateWinnings(); // Now returns net winnings already
+        const winnings = calculateWinnings();
 
-        // First record game statistics
-        await gameService.recordGameStats({
-          turnsToWin: playerTurns,
-          endingMultiplier: currentMultiplier,
-        });
+        if (winnings > 0) {
+          // Update points via API
+          const response = await authService.updatePoints(winnings);
 
-        // Then update points with net winnings
-        const response = await authService.updatePoints(netWinnings);
+          // Update final points state
+          setFinalPoints({
+            previousBalance,
+            earned: winnings,
+            newBalance: response.points,
+          });
 
-        // Update final points state
-        setFinalPoints({
-          previousBalance,
-          earned: netWinnings,
-          newBalance: response.points,
-        });
-
-        // Update user context
-        setUser((prev) => ({
-          ...prev,
-          points: response.points,
-        }));
+          // Update user context
+          setUser((prev) => ({
+            ...prev,
+            points: response.points,
+          }));
+        }
       } catch (error) {
-        console.error("Failed to update points or record stats:", error);
+        console.error("Failed to update points:", error);
         setFinalPoints({
           previousBalance: user.points,
           earned: 0,
@@ -218,23 +210,12 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
         });
       }
     } else {
-      // Handle loss case
+      // Even if player didn't win, show their current balance
       setFinalPoints({
         previousBalance: user?.points || 0,
-        earned: -ENTRY_PRICE,
-        newBalance: (user?.points || 0) - ENTRY_PRICE,
+        earned: 0,
+        newBalance: user?.points || 0,
       });
-
-      // Update points to subtract entry fee for loss
-      try {
-        const response = await authService.updatePoints(-ENTRY_PRICE);
-        setUser((prev) => ({
-          ...prev,
-          points: response.points,
-        }));
-      } catch (error) {
-        console.error("Failed to update points for loss:", error);
-      }
     }
 
     setGameOver(true);
@@ -244,18 +225,15 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
   const handleGuess = (guess, isCpu = false) => {
     const numericGuess = parseInt(guess, 10);
 
-    // Reset timer to 15s for player's next turn
-    if (isCpu) {
-      setTimeLeft(TURN_TIME_LIMIT);
-    }
-
     // First, increment player turns if it's a player turn
     if (!isCpu) {
       setPlayerTurns((prev) => {
         const newPlayerTurns = prev + 1;
+        // Get multiplier for the next turn (current turns count)
         const turnMultiplier =
           TURN_MULTIPLIERS[newPlayerTurns] || TURN_MULTIPLIERS[0];
         setCurrentMultiplier(turnMultiplier);
+
         return newPlayerTurns;
       });
     }
@@ -372,13 +350,6 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
     }, 1000);
   };
 
-  const handleMuteToggle = () => {
-    if (audioRef.current) {
-      audioRef.current.muted = !audioRef.current.muted;
-      setIsMuted(!isMuted);
-    }
-  };
-
   return (
     <div className="min-h-screen w-full flex items-center justify-center">
       {stage === "playing" && (
@@ -394,26 +365,13 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
               YOUR TURN
             </h1>
             {/* Info Button */}
-            <div className="absolute top-4 right-4 flex gap-2">
-              <button
-                onClick={handleMuteToggle}
-                className="p-2 rounded-full bg-[#FFF5E4]/10 hover:bg-[#FFF5E4]/20 transition-colors"
-                aria-label={isMuted ? "Unmute" : "Mute"}
-              >
-                {isMuted ? (
-                  <VolumeX className="w-5 h-5 text-[#FFF5E4]/70" />
-                ) : (
-                  <Volume2 className="w-5 h-5 text-[#FFF5E4]/70" />
-                )}
-              </button>
-              <button
-                onClick={() => setIsInfoOpen(true)}
-                className="p-2 rounded-full bg-[#FFF5E4]/10 hover:bg-[#FFF5E4]/20 transition-colors"
-                aria-label="Game Information"
-              >
-                <Info className="w-5 h-5 text-[#FFF5E4]/70" />
-              </button>
-            </div>
+            <button
+              onClick={() => setIsInfoOpen(true)}
+              className="absolute top-4 right-4 p-2 rounded-full bg-[#FFF5E4]/10 hover:bg-[#FFF5E4]/20 transition-colors"
+              aria-label="Game Information"
+            >
+              <Info className="w-5 h-5 text-[#FFF5E4]/70" />
+            </button>
             {/* Number Range Display */}
             {!feedback && !isCpuTurn && (
               <div className="text-center mb-12">
@@ -538,13 +496,6 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
                       />
                     </div>
 
-                    {/* Show CPU's calculated guess */}
-                    {cpuFeedback && (
-                      <div className="text-2xl text-[#FFF5E4]/80 mb-4">
-                        CPU guesses: {Math.floor((minRange + maxRange) / 2)}
-                      </div>
-                    )}
-
                     {/* Loading Animation when no feedback */}
                     {!cpuFeedback && (
                       <div className="flex gap-2 justify-center mb-4">
@@ -668,14 +619,6 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
               transition={{ delay: 0.5 }}
               className="w-full bg-gradient-to-b from-black/90 to-black/70 border-b border-x border-[#FFF5E4]/20 p-8 space-y-8"
             >
-              {/* Add secret number display */}
-              <div className="text-center">
-                <span className="text-[#FFF5E4]/70">Secret Number: </span>
-                <span className="text-[#FBE294] font-bold text-2xl">
-                  {secretNumber}
-                </span>
-              </div>
-
               {/* Flavor Text */}
               <div className="space-y-4 text-center">
                 <p className="text-[#FFF5E4]/80 italic text-lg">

@@ -52,6 +52,7 @@ export const authService = {
         email: response.data.email,
         walletAddress: response.data.walletAddress || null,
         points: response.data.points || 0,
+        isAdmin: response.data.isAdmin || false,
         quests: {
           nftVerified: response.data.quests?.nftVerified || false,
           nftHolder: response.data.quests?.nftHolder || false
@@ -64,7 +65,7 @@ export const authService = {
         })) || []
       };
 
-    
+      console.log(userData)
       return userData;
     } catch (error) {
       console.error('Me error:', error.response || error);
@@ -173,6 +174,28 @@ export const authService = {
       throw error.response?.data || { message: 'Network error' };
     }
   },
+};
+
+export const gameService = {
+  recordGameStats: async (stats) => {
+    try {
+      const response = await api.post('/game-stats', stats);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to record game statistics:', error);
+      throw error.response?.data || { message: 'Network error' };
+    }
+  },
+
+  getGameStats: async () => {
+    try {
+      const response = await api.get('/admin-stats');
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch game statistics:', error);
+      throw error.response?.data || { message: 'Network error' };
+    }
+  }
 };
 
 // Add request interceptor to include token in all requests
