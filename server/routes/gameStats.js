@@ -81,11 +81,11 @@ router.get('/game-stats', isAuthenticated, isAdmin, async (req, res) => {
     
     // Get recent games
     const recentGames = await GameStat.find()
-      .sort({ createdAt: -1 })  // Changed from timestamp to createdAt
+      .sort({ timestamp: -1 })
       .limit(15)
       .lean();
     
-    // Get average stats
+    // Get average stats - removed userId match since we want all games
     const stats = await GameStat.aggregate([
       {
         $group: {
@@ -103,8 +103,7 @@ router.get('/game-stats', isAuthenticated, isAdmin, async (req, res) => {
       recentGames: recentGames.map(game => ({
         ...game,
         roi: Number(game.roi.toFixed(2)),
-        endingMultiplier: Number(game.endingMultiplier.toFixed(2)),
-        timestamp: game.createdAt || game.timestamp // Fallback for timestamp
+        endingMultiplier: Number(game.endingMultiplier.toFixed(2))
       })),
       statistics: stats[0] || {
         avgRoi: 0,
