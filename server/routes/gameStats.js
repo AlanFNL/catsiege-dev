@@ -36,8 +36,8 @@ router.post('/game-stats', isAuthenticated, async (req, res) => {
   }
 });
 
-// Get game statistics for a user
-router.get('/game-stats', isAuthenticated, async (req, res) => {
+// Get game statistics for users
+router.get('/user-stats', isAuthenticated, async (req, res) => {
   try {
     const userId = req.userId;
     
@@ -46,7 +46,7 @@ router.get('/game-stats', isAuthenticated, async (req, res) => {
     
     // Get average ROI
     const stats = await GameStat.aggregate([
-      { $match: { userId: mongoose.Types.ObjectId(userId) } },
+      { $match: { userId: new mongoose.Types.ObjectId(userId) } },
       {
         $group: {
           _id: null,
@@ -73,8 +73,8 @@ router.get('/game-stats', isAuthenticated, async (req, res) => {
   }
 });
 
-// Get game statistics for admin
-router.get('/game-stats', isAuthenticated, isAdmin, async (req, res) => {
+// Get game statistics for admin (renamed from /game-stats to /admin-stats)
+router.get('/admin-stats', isAuthenticated, isAdmin, async (req, res) => {
   try {
     // Get total games played
     const totalGames = await GameStat.countDocuments();
