@@ -23,6 +23,10 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: null,
   },
+  admin: {
+    type: Boolean,
+
+  },
   completedQuests: [{
     questId: String,
     completedAt: Date,
