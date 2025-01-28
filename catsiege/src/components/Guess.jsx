@@ -256,59 +256,108 @@ function Guess() {
             animate={{ scale: 1, opacity: 1 }}
             className="bg-black/90 p-8 rounded-xl border border-[#FFF5E4]/20 max-w-md w-full mx-4"
           >
-            <h2 className="text-2xl text-center font-bold text-[#FFF5E4] mb-4">
-              Start Game?
-            </h2>
-
-            <div className="bg-[#FFF5E4]/5 rounded-lg p-4 mb-6">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-[#FFF5E4]/70">Current Balance:</span>
-                <span className="text-[#FFF5E4] font-bold text-lg">
-                  {user?.points || 0} points
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-[#FFF5E4]/70">Game Cost:</span>
-                <span className="text-red-400 font-bold text-lg">
-                  -5 points
-                </span>
-              </div>
-              <div className="mt-3 pt-3 border-t border-[#FFF5E4]/10">
-                <div className="flex justify-between items-center">
-                  <span className="text-[#FFF5E4]/70">Balance After:</span>
-                  <span className="text-[#FFF5E4] font-bold text-lg">
-                    {(user?.points || 0) - 5} points
-                  </span>
+            {!user ? (
+              // Scenario 1: User not logged in
+              <>
+                <h2 className="text-2xl text-center font-bold text-[#FFF5E4] mb-4">
+                  Login Required
+                </h2>
+                <p className="text-[#FFF5E4]/80 text-center mb-8">
+                  You need to be logged in to play this game!
+                </p>
+                <div className="flex justify-center">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => (window.location.href = "/login")}
+                    className="px-6 py-2 font-bold bg-[#FFF5E4]/10 hover:bg-[#FFF5E4]/20 text-[#FFF5E4] rounded-lg"
+                  >
+                    Login Now
+                  </motion.button>
                 </div>
-              </div>
-            </div>
-
-            <div className="flex gap-4 justify-evenly">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setShowConfirmation(false)}
-                className="px-4 py-2 font-bold text-[#FFF5E4]/60 hover:text-[#FFF5E4]"
-              >
-                Cancel
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handleStartGameConfirm}
-                disabled={!user || user.points < 5 || isStartLoading}
-                className="px-6 py-2 font-bold bg-[#FFF5E4]/10 hover:bg-[#FFF5E4]/20 text-[#FFF5E4] rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isStartLoading ? (
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 border-2 border-[#FFF5E4]/20 border-t-[#FFF5E4] rounded-full animate-spin" />
-                    <span>Loading...</span>
+              </>
+            ) : user.points === 0 ? (
+              // Scenario 2: User has 0 points
+              <>
+                <h2 className="text-2xl text-center font-bold text-[#FFF5E4] mb-4">
+                  Insufficient Points
+                </h2>
+                <div className="bg-[#FFF5E4]/5 rounded-lg p-4 mb-6">
+                  <p className="text-[#FFF5E4]/80 text-center mb-4">
+                    You can't play this game because you have 0 points.
+                  </p>
+                  <p className="text-[#FFF5E4]/80 text-center">
+                    Click on your account menu in the top right corner and check
+                    if you can claim points to play!
+                  </p>
+                </div>
+                <div className="flex justify-center">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setShowConfirmation(false)}
+                    className="px-6 py-2 font-bold bg-[#FFF5E4]/10 hover:bg-[#FFF5E4]/20 text-[#FFF5E4] rounded-lg"
+                  >
+                    Got It
+                  </motion.button>
+                </div>
+              </>
+            ) : (
+              // Original confirmation content for users with points
+              <>
+                <h2 className="text-2xl text-center font-bold text-[#FFF5E4] mb-4">
+                  Start Game?
+                </h2>
+                <div className="bg-[#FFF5E4]/5 rounded-lg p-4 mb-6">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-[#FFF5E4]/70">Current Balance:</span>
+                    <span className="text-[#FFF5E4] font-bold text-lg">
+                      {user.points} points
+                    </span>
                   </div>
-                ) : (
-                  "Start Game"
-                )}
-              </motion.button>
-            </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[#FFF5E4]/70">Game Cost:</span>
+                    <span className="text-red-400 font-bold text-lg">
+                      -5 points
+                    </span>
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-[#FFF5E4]/10">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[#FFF5E4]/70">Balance After:</span>
+                      <span className="text-[#FFF5E4] font-bold text-lg">
+                        {user.points - 5} points
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex gap-4 justify-evenly">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setShowConfirmation(false)}
+                    className="px-4 py-2 font-bold text-[#FFF5E4]/60 hover:text-[#FFF5E4]"
+                  >
+                    Cancel
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={handleStartGameConfirm}
+                    disabled={user.points < 5 || isStartLoading}
+                    className="px-6 py-2 font-bold bg-[#FFF5E4]/10 hover:bg-[#FFF5E4]/20 text-[#FFF5E4] rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isStartLoading ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 border-2 border-[#FFF5E4]/20 border-t-[#FFF5E4] rounded-full animate-spin" />
+                        <span>Loading...</span>
+                      </div>
+                    ) : (
+                      "Start Game"
+                    )}
+                  </motion.button>
+                </div>
+              </>
+            )}
           </motion.div>
         </div>
       )}
