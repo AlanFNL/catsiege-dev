@@ -2,7 +2,7 @@ import React, { useState, useRef } from "react";
 import orb from "../assets/guess-start4.png";
 import GuessingGame from "./GuessGame";
 
-import example from "../assets/screen.webp";
+import example from "../assets/example.webp";
 import { motion, AnimatePresence } from "framer-motion";
 
 import bgMusic from "../assets/guess-music.mp3";
@@ -87,7 +87,7 @@ function Guess() {
   }, []);
 
   return (
-    <section className="relative w-screen h-screen bg-[url('./assets/BG.webp')] bg-center flex justify-center items-center">
+    <section className="relative w-screen h-screen bg-[url('./assets/guess-game-bgg.webp')] bg-center flex justify-center items-center">
       <AnimatePresence mode="wait">
         {activeTab === "" && (
           <motion.div
@@ -96,16 +96,20 @@ function Guess() {
             initial="hidden"
             animate="visible"
             exit="exit"
-            className="relative w-[90vw] sm:w-[600px] flex flex-col items-center h-[80vh] bg-black/50 backdrop-blur-sm rounded-xl border border-[#FFF5E4]/20 p-8"
+            className="relative w-[90vw] sm:w-[600px] flex flex-col items-center h-[80vh] bg-black/50 border4 backdrop-blur-sm rounded-xl shadow-f  p-8"
           >
-            <h1 className="mt-[18%] text-2xl text-center font-bold z-10 text-[#FFF5E4]">
+            <h1 className=" text-4xl text-center font-bold z-10 text-[#D5BA8F]">
               The haunted number
             </h1>
+            <span className=" text-2xl mt-4 text-center font-bold z-10 text-[#D5BA8F]">
+              Minigame
+            </span>
+            <div className="border-b-4 border-[#D5BA8F] w-full mt-4 rounded-full" />
 
             <div className="w-[500px] h-[80vh] md:h-[600px] flex flex-col gap-7 justify-center text-center items-center px-6">
               <motion.button
                 onClick={() => setShowConfirmation(true)}
-                className="z-10 text-center font-bold text-3xl h-16 w-[350px] rounded-lg bg-black/60 border border-[#FFF5E4]/20 backdrop-blur-sm text-[#FFF5E4] hover:bg-[#FFF5E4]/10 transition-all"
+                className="z-10 text-center font-bold text-3xl h-16 w-[350px] rounded-lg frame4 backdrop-blur-sm text-[#FFF5E4]  transition-all"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
@@ -114,7 +118,7 @@ function Guess() {
 
               <motion.button
                 onClick={setRules}
-                className="z-10 text-center font-bold text-3xl h-16 w-[350px] rounded-lg bg-black/60 border border-[#FFF5E4]/20 backdrop-blur-sm text-[#FFF5E4] hover:bg-[#FFF5E4]/10 transition-all"
+                className="z-10 text-center font-bold text-3xl h-16 w-[350px] rounded-lg frame4 backdrop-blur-sm text-[#FFF5E4] transition-all"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
@@ -133,9 +137,9 @@ function Guess() {
             exit="exit"
             className="flex justify-center flex-col items-center"
           >
-            <div className="relative w-[90vw] sm:w-[600px] h-[80vh] bg-black/50 backdrop-blur-sm rounded-xl border border-[#FFF5E4]/20 p-8">
+            <div className="relative w-[90vw] sm:w-[600px] h-[80vh] bg-black/50 backdrop-blur-sm rounded-xl border4 shadow-f p-8">
               <div className="flex flex-col items-center  h-[85%]">
-                <h1 className="text-3xl font-bold text-[#FFF5E4] mb-8">
+                <h1 className="text-3xl font-bold text-[#D5BA8F] mb-8">
                   RULES
                 </h1>
 
@@ -232,7 +236,7 @@ function Guess() {
               <div className="flex items-center justify-center mt-16">
                 <motion.button
                   onClick={backFromRules}
-                  className=" px-8 py-2 rounded-lg bg-[#FFF5E4]/10 hover:bg-[#FFF5E4]/20 text-[#FFF5E4] transition-all"
+                  className=" px-8 py-2 rounded-lg frame4 text-[#FFF5E4] transition-all"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >

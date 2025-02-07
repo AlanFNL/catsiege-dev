@@ -82,3 +82,70 @@ input[type="range"]::-moz-range-thumb:hover {
   background: #f6e05e;
   transform: scale(1.1);
 }
+
+
+.button2 {
+  /* Base */
+
+
+
+background: linear-gradient(270deg, rgba(255, 255, 255, 0) -1.83%, rgba(255, 255, 255, 0.7) 47.58%, rgba(255, 255, 255, 0) 100.17%), radial-gradient(50.88% 50.88% at 50% 86.84%, #702308 0%, rgba(115, 33, 11, 0) 100%), linear-gradient(180deg, #3A281C 0%, #37271F 50.95%, #1E1713 51.59%, #291D13 100%), #181818;
+background-blend-mode: overlay, lighten, normal, normal;
+box-shadow: 0px 20.7723px 48.4687px 13.8482px rgba(0, 0, 0, 0.35), inset 0px 12.1172px 0px #B4A284, inset 0px 13.8482px 0px rgba(255, 232, 205, 0.8), inset 0px -10.3862px 0px #321205, inset 0px -12.1172px 1.73103px #9A4212;
+
+
+
+
+/* Frame */
+
+
+
+}
+
+.texture2 {
+  /* Texture Overlay */
+
+
+
+
+background-blend-mode: soft-light;
+mix-blend-mode: color-dodge;
+transform: matrix(-1, 0, 0, 1, 0, 0);
+
+}
+
+.frame2 {
+
+background: linear-gradient(180deg, #D5BA8F 0%, #E0C495 49.22%, #756346 50.52%, #C4AB82 100%);
+box-shadow: 0px 0px 10.3862px #000000, inset 0px 0.69241px 0.865513px #FFF0DA, inset 0px -0.865513px 1.73103px rgba(0, 0, 0, 0.3);
+border: 5px solid;
+
+border-image-source: linear-gradient(180deg, #D5BA8F 0%, #E0C495 49.22%, #756346 50.52%, #C4AB82 100%);
+
+
+}
+
+
+.frame4 {
+  background: linear-gradient(270deg, rgba(255, 255, 255, 0) -1.83%, rgba(255, 255, 255, 0.7) 47.58%, rgba(255, 255, 255, 0) 100.17%), 
+              radial-gradient(50.88% 50.88% at 50% 86.84%, #702308 0%, rgba(115, 33, 11, 0) 100%), 
+              linear-gradient(180deg, #3A281C 0%, #37271F 50.95%, #1E1713 51.59%, #291D13 100%), 
+              #181818;
+  background-blend-mode: overlay, lighten, normal, normal;
+  
+  border: 5px solid;
+  border-image-source: linear-gradient(90deg, #D5BA8F, #E0C495, #756346, #C4AB82);
+  border-image-slice: 1;
+}
+
+.border4 {
+    
+  border: 5px solid;
+  border-image-source: linear-gradient(90deg, #D5BA8F, #E0C495, #756346, #C4AB82);
+  border-image-slice: 1;
+}
+
+.shadow-f {
+  box-shadow: 0px 0px 15.53px 0px #CDF6FF;
+
+}
