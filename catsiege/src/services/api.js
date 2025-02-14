@@ -8,6 +8,15 @@ const api = axios.create({
   }
 });
 
+// Add this helper function
+const handleResponse = async (response) => {
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.message || 'Network response was not ok');
+  }
+  return response.json();
+};
+
 export const authService = {
   async register(email, password) {
     try {
@@ -199,48 +208,46 @@ export const gameService = {
 
   // Create or resume a game session
   createGameSession: async () => {
-    const response = await fetch(`/game/session/create`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('tokenCat')}`,
-        'Content-Type': 'application/json',
-      },
-    });
-    return handleResponse(response);
+    try {
+      const response = await api.post('/game/session/create');
+      return response.data;
+    } catch (error) {
+      console.error('Failed to create game session:', error);
+      throw error.response?.data || { message: 'Network error' };
+    }
   },
 
   // Get current game session
   getGameSession: async () => {
-    const response = await fetch(`/game/session`, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('tokenCat')}`,
-      },
-    });
-    return handleResponse(response);
+    try {
+      const response = await api.get('/game/session');
+      return response.data;
+    } catch (error) {
+      console.error('Failed to get game session:', error);
+      throw error.response?.data || { message: 'Network error' };
+    }
   },
 
   // Submit a guess
-  submitGuess: async (guess) => {
-    const response = await fetch(`/game/guess`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('tokenCat')}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ guess }),
-    });
-    return handleResponse(response);
+  submitGuess: async (data) => {
+    try {
+      const response = await api.post('/game/guess', data);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to submit guess:', error);
+      throw error.response?.data || { message: 'Network error' };
+    }
   },
 
   // End game session
   endGameSession: async () => {
-    const response = await fetch(`/game/session/end`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('tokenCat')}`,
-      },
-    });
-    return handleResponse(response);
+    try {
+      const response = await api.post('/game/session/end');
+      return response.data;
+    } catch (error) {
+      console.error('Failed to end game session:', error);
+      throw error.response?.data || { message: 'Network error' };
+    }
   },
 };
 
