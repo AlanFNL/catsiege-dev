@@ -78,7 +78,7 @@ router.post('/session/create', isAuthenticated, async (req, res) => {
 // Submit a guess
 router.post('/guess', isAuthenticated, async (req, res) => {
   try {
-    const { guess, isTimeout } = req.body;
+    const { guess } = req.body;
     const session = await GameSession.findOne({
       userId: req.userId,
       isActive: true
@@ -94,12 +94,16 @@ router.post('/guess', isAuthenticated, async (req, res) => {
       session.playerTurns += 1;
     }
 
+    // Store the guess and its result
+    session.lastGuess = guess;
+    
     // Calculate new multiplier based on turns
     const multiplierIndex = Math.min(7, Math.floor(session.playerTurns));
     session.currentMultiplier = TURN_MULTIPLIERS[multiplierIndex];
 
     // Process guess
     if (guess === session.secretNumber) {
+      session.lastGuessResult = 'win';
       // Handle win
       const winnings = ENTRY_PRICE * session.currentMultiplier;
       
@@ -115,14 +119,18 @@ router.post('/guess', isAuthenticated, async (req, res) => {
       return res.json({
         result: 'win',
         winnings,
-        newBalance: user.points
+        newBalance: user.points,
+        lastGuess: guess,
+        lastGuessResult: 'win'
       });
     }
 
-    // Update range based on guess
+    // Update range and store guess result
     if (guess < session.secretNumber) {
+      session.lastGuessResult = 'higher';
       session.minRange = Math.max(session.minRange, guess + 1);
     } else {
+      session.lastGuessResult = 'lower';
       session.maxRange = Math.min(session.maxRange, guess - 1);
     }
 
@@ -134,7 +142,6 @@ router.post('/guess', isAuthenticated, async (req, res) => {
 
     res.json({
       result: 'continue',
-      secretNumber: session.secretNumber,
       minRange: session.minRange,
       maxRange: session.maxRange,
       turns: session.turns,
@@ -142,7 +149,8 @@ router.post('/guess', isAuthenticated, async (req, res) => {
       currentMultiplier: session.currentMultiplier,
       isCpuTurn: session.isCpuTurn,
       timeLeft: session.timeLeft,
-      isTimeout
+      lastGuess: session.lastGuess,
+      lastGuessResult: session.lastGuessResult
     });
 
   } catch (error) {

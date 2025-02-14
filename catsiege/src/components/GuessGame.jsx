@@ -124,7 +124,6 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
     if (isCpuTurn && !gameOver) {
       timeoutId = setTimeout(async () => {
         try {
-          // CPU makes a guess using binary search
           const cpuGuess = Math.floor((minRange + maxRange) / 2);
 
           const result = await gameService.submitGuess({
@@ -133,6 +132,7 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
           });
 
           if (result.result === "win") {
+            setCpuFeedback("CPU won!");
             setHasWon(false);
             handleGameEnd(false, result);
           } else {
@@ -145,6 +145,10 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
             setIsCpuTurn(result.isCpuTurn);
             setTimeLeft(TURN_TIME_LIMIT);
             setTimerActive(!result.isCpuTurn);
+            // Set feedback with updated range
+            setFeedback(
+              `Choose between ${result.minRange} and ${result.maxRange}`
+            );
           }
         } catch (error) {
           console.error("CPU guess failed:", error);
@@ -227,18 +231,18 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
     setCurrentMultiplier(newMultiplier);
   }, [playerTurns]);
 
-  // Calculate winnings with decimal precision
+  // Calculate winnings with decimal precision and safety checks
   const calculateWinnings = () => {
     if (!currentMultiplier) return 0;
 
     // Calculate total winnings (entry price * multiplier)
-    const totalWinnings = ENTRY_PRICE * currentMultiplier;
+    const totalWinnings = ENTRY_PRICE * (currentMultiplier || 1);
 
     // Calculate net winnings (total winnings - entry price)
     const netWinnings = totalWinnings - ENTRY_PRICE;
 
-    // Round to 2 decimal places
-    return Number(netWinnings.toFixed(2));
+    // Round to 2 decimal places with safety check
+    return Number((netWinnings || 0).toFixed(2));
   };
 
   // Modified handleGuess to use server validation
@@ -261,7 +265,7 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
       setTimeLeft(TURN_TIME_LIMIT);
 
       if (result.gameOver) {
-        await handleGameEnd(result.hasWon);
+        await handleGameEnd(result.hasWon, result);
       } else if (!isCpu) {
         setIsCpuTurn(true);
         setTimerActive(false);
@@ -273,28 +277,36 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
     }
   };
 
-  // Modified handleGameEnd to use server endpoint
-  const handleGameEnd = async (hasWon) => {
+  // Modified handleGameEnd to handle undefined values
+  const handleGameEnd = async (hasWon, result) => {
     try {
-      const result = await gameService.endGameSession();
+      const currentPoints = user?.points || 0;
+      const winnings = result?.winnings || 0;
 
       setFinalPoints({
-        previousBalance: result.previousBalance,
-        earned: result.earned,
-        newBalance: result.newBalance,
+        previousBalance: currentPoints,
+        earned: hasWon ? winnings - ENTRY_PRICE : -ENTRY_PRICE,
+        newBalance: result?.newBalance || currentPoints,
       });
 
-      // Update user context with new balance
       setUser((prev) => ({
         ...prev,
-        points: result.newBalance,
+        points: result?.newBalance || prev?.points || 0,
       }));
 
       setGameOver(true);
       setStage("result");
+
+      // End the session
+      await gameService.endGameSession();
     } catch (error) {
       console.error("Failed to end game:", error);
-      // Handle error appropriately
+      // Set safe default values in case of error
+      setFinalPoints({
+        previousBalance: user?.points || 0,
+        earned: -ENTRY_PRICE,
+        newBalance: (user?.points || 0) - ENTRY_PRICE,
+      });
     }
   };
 
@@ -352,9 +364,13 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
           // Set feedback based on comparison
           const guessNum = parseInt(userGuess);
           if (guessNum < result.secretNumber) {
-            setFeedback("Higher!");
+            setFeedback(
+              `Higher! Choose between ${result.minRange} and ${result.maxRange}`
+            );
           } else {
-            setFeedback("Lower!");
+            setFeedback(
+              `Lower! Choose between ${result.minRange} and ${result.maxRange}`
+            );
           }
 
           // Update game state based on server response
@@ -450,7 +466,7 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
               </button>
             </div>
             {/* Number Range Display */}
-            {!feedback && !isCpuTurn && (
+            {!isCpuTurn && (
               <div className="text-center mb-12">
                 <p className="text-[#FFF5E4]/80 text-xl mb-4">
                   Choose a number between

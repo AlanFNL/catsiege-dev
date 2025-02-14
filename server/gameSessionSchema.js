@@ -46,6 +46,15 @@ const gameSessionSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
     expires: 3600 // Session expires after 1 hour
+  },
+  lastGuess: {
+    type: Number,
+    default: null
+  },
+  lastGuessResult: {
+    type: String,
+    enum: ['higher', 'lower', 'win', null],
+    default: null
   }
 });
 
