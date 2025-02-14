@@ -78,7 +78,7 @@ router.post('/session/create', isAuthenticated, async (req, res) => {
 // Submit a guess
 router.post('/guess', isAuthenticated, async (req, res) => {
   try {
-    const { guess } = req.body;
+    const { guess, isTimeout } = req.body;
     const session = await GameSession.findOne({
       userId: req.userId,
       isActive: true
@@ -141,7 +141,8 @@ router.post('/guess', isAuthenticated, async (req, res) => {
       playerTurns: session.playerTurns,
       currentMultiplier: session.currentMultiplier,
       isCpuTurn: session.isCpuTurn,
-      timeLeft: session.timeLeft
+      timeLeft: session.timeLeft,
+      isTimeout
     });
 
   } catch (error) {

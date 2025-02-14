@@ -124,8 +124,8 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
     if (isCpuTurn && !gameOver) {
       timeoutId = setTimeout(async () => {
         try {
+          // CPU makes a guess using binary search
           const cpuGuess = Math.floor((minRange + maxRange) / 2);
-          setCpuFeedback(`CPU guesses: ${cpuGuess}`);
 
           const result = await gameService.submitGuess({
             guess: cpuGuess,
@@ -133,18 +133,10 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
           });
 
           if (result.result === "win") {
-            setCpuFeedback("CPU won!");
             setHasWon(false);
             handleGameEnd(false, result);
           } else {
-            // Set CPU feedback based on comparison
-            if (cpuGuess < result.secretNumber) {
-              setCpuFeedback(`CPU guessed ${cpuGuess} - Higher!`);
-            } else {
-              setCpuFeedback(`CPU guessed ${cpuGuess} - Lower!`);
-            }
-
-            // Update game state
+            // Update game state based on server response
             setMinRange(result.minRange);
             setMaxRange(result.maxRange);
             setTurns(result.turns);
@@ -156,7 +148,6 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
           }
         } catch (error) {
           console.error("CPU guess failed:", error);
-          setCpuFeedback("CPU turn failed");
         }
       }, 2000);
     }
@@ -178,12 +169,43 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
     // Handle time running out
     if (timeLeft === 0 && !isCpuTurn && !gameOver) {
       const handleTimeout = async () => {
-        setTimerActive(false);
-        const randomGuess =
-          Math.floor(Math.random() * (maxRange - minRange + 1)) + minRange;
-        setUserGuess(randomGuess.toString());
-        await handleGuessSubmit();
+        setIsSubmitting(true);
+        try {
+          // Generate random guess within current range
+          const randomGuess =
+            Math.floor(Math.random() * (maxRange - minRange + 1)) + minRange;
+          setUserGuess(randomGuess.toString());
+
+          const result = await gameService.submitGuess({
+            guess: randomGuess,
+            isTimeout: true,
+          });
+
+          if (result.result === "win") {
+            setFeedback("Time's up! Random guess won!");
+            setHasWon(true);
+            handleGameEnd(true, result);
+          } else {
+            setFeedback("Time's up! Random guess: " + randomGuess);
+            // Update game state based on server response
+            setMinRange(result.minRange);
+            setMaxRange(result.maxRange);
+            setTurns(result.turns);
+            setPlayerTurns(result.playerTurns);
+            setCurrentMultiplier(result.currentMultiplier);
+            setIsCpuTurn(result.isCpuTurn);
+            setTimeLeft(TURN_TIME_LIMIT);
+            setTimerActive(!result.isCpuTurn);
+          }
+        } catch (error) {
+          console.error("Failed to handle timeout:", error);
+          setFeedback("Error handling timeout. Please try again.");
+        } finally {
+          setIsSubmitting(false);
+          setUserGuess("");
+        }
       };
+
       handleTimeout();
     }
 
@@ -313,7 +335,7 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
     });
   };
 
-  // Modified handleGuessSubmit to include loading state and feedback
+  // Modified handleGuessSubmit with loading state and feedback
   const handleGuessSubmit = async () => {
     if (!isCpuTurn && !gameOver && userGuess && !isSubmitting) {
       setIsSubmitting(true);
@@ -562,7 +584,7 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
                     {/* Show CPU's calculated guess */}
                     {cpuFeedback && (
                       <div className="text-2xl text-[#FFF5E4]/80 mb-4">
-                        {cpuFeedback}
+                        CPU guesses: {Math.floor((minRange + maxRange) / 2)}
                       </div>
                     )}
 
