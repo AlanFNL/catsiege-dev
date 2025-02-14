@@ -10,6 +10,7 @@ const userRoutes = require('./routes/user.js');
 const questRoutes = require('./routes/quests.js');
 const pointsRouter = require('./routes/points');
 const gameStatsRoutes = require('./routes/gameStats');
+const gameRoutes = require('./routes/game');
 
 
 const app = express();
@@ -57,6 +58,7 @@ app.use('/api/user', userRoutes);
 app.use('/api', questRoutes);
 app.use('/api', pointsRouter);
 app.use('/api', gameStatsRoutes);
+app.use('/api/game', gameRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

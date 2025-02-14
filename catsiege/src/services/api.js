@@ -195,7 +195,53 @@ export const gameService = {
       console.error('Failed to fetch game statistics:', error);
       throw error.response?.data || { message: 'Network error' };
     }
-  }
+  },
+
+  // Create or resume a game session
+  createGameSession: async () => {
+    const response = await fetch(`${API_URL}/game/session/create`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('tokenCat')}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    return handleResponse(response);
+  },
+
+  // Get current game session
+  getGameSession: async () => {
+    const response = await fetch(`${API_URL}/game/session`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('tokenCat')}`,
+      },
+    });
+    return handleResponse(response);
+  },
+
+  // Submit a guess
+  submitGuess: async (guess) => {
+    const response = await fetch(`${API_URL}/game/guess`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('tokenCat')}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ guess }),
+    });
+    return handleResponse(response);
+  },
+
+  // End game session
+  endGameSession: async () => {
+    const response = await fetch(`${API_URL}/game/session/end`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('tokenCat')}`,
+      },
+    });
+    return handleResponse(response);
+  },
 };
 
 // Add request interceptor to include token in all requests

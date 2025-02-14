@@ -74,34 +74,45 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
   const [isInfoOpen, setIsInfoOpen] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
 
-  // Reset game state when component mounts or when starting a new game
-  const resetGame = () => {
-    setSecretNumber(Math.floor(Math.random() * 256) + 1);
-    setUserGuess("");
-    setFeedback("");
-    setTurns(0);
-    setPlayerTurns(0);
-    setMultiplier(20);
-    setScore(0);
-    setHasWon(false);
-    setMinRange(1);
-    setMaxRange(256);
-    setGuessedRanges([]);
-    setIsCpuTurn(false);
-    setGameOver(false);
-    setTimeLeft(TURN_TIME_LIMIT);
-    setTimerActive(true);
-    setCurrentMultiplier(TURN_MULTIPLIERS[0]);
-    setFinalPoints({
-      previousBalance: 0,
-      earned: 0,
-      newBalance: 0,
-    });
-  };
+  // Add new state for session management
+  const [sessionId, setSessionId] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Initialize game when component mounts
+  // Initialize or resume game session
   useEffect(() => {
-    resetGame();
+    const initializeGame = async () => {
+      try {
+        setIsLoading(true);
+        // Try to get existing session
+        const session = await gameService.getGameSession();
+
+        if (session) {
+          // Resume existing game
+          setSessionId(session.id);
+          setSecretNumber(session.secretNumber);
+          setTurns(session.turns);
+          setPlayerTurns(session.playerTurns);
+          setMinRange(session.minRange);
+          setMaxRange(session.maxRange);
+          setCurrentMultiplier(session.currentMultiplier);
+          setIsCpuTurn(session.isCpuTurn);
+          setTimeLeft(session.timeLeft);
+          setTimerActive(true);
+        } else {
+          // Create new session
+          const newSession = await gameService.createGameSession();
+          setSessionId(newSession.id);
+          resetLocalState(newSession);
+        }
+      } catch (error) {
+        console.error("Failed to initialize game:", error);
+        // Handle error appropriately
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    initializeGame();
   }, []);
 
   useEffect(() => {
@@ -182,157 +193,98 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
     return Number(netWinnings.toFixed(2));
   };
 
-  const handleGameEnd = async (hasWon) => {
-    if (hasWon && user) {
-      try {
-        const previousBalance = user.points;
-        const netWinnings = calculateWinnings(); // Now returns net winnings already
+  // Modified handleGuess to use server validation
+  const handleGuess = async (guess, isCpu = false) => {
+    if (!sessionId) return;
 
-        // First record game statistics
-        await gameService.recordGameStats({
-          turnsToWin: playerTurns,
-          endingMultiplier: currentMultiplier,
-        });
-
-        // Then update points with net winnings
-        const response = await authService.updatePoints(netWinnings);
-
-        // Update final points state
-        setFinalPoints({
-          previousBalance,
-          earned: netWinnings,
-          newBalance: response.points,
-        });
-
-        // Update user context
-        setUser((prev) => ({
-          ...prev,
-          points: response.points,
-        }));
-      } catch (error) {
-        console.error("Failed to update points or record stats:", error);
-        setFinalPoints({
-          previousBalance: user.points,
-          earned: 0,
-          newBalance: user.points,
-        });
-      }
-    } else {
-      // Handle loss case
-      setFinalPoints({
-        previousBalance: user?.points || 0,
-        earned: -ENTRY_PRICE,
-        newBalance: (user?.points || 0) - ENTRY_PRICE,
+    try {
+      const result = await gameService.submitGuess({
+        sessionId,
+        guess,
+        isCpu,
       });
 
-      // Update points to subtract entry fee for loss
-      try {
-        const response = await authService.updatePoints(-ENTRY_PRICE);
-        setUser((prev) => ({
-          ...prev,
-          points: response.points,
-        }));
-      } catch (error) {
-        console.error("Failed to update points for loss:", error);
-      }
-    }
+      // Update local state based on server response
+      setMinRange(result.minRange);
+      setMaxRange(result.maxRange);
+      setTurns(result.turns);
+      setPlayerTurns(result.playerTurns);
+      setCurrentMultiplier(result.currentMultiplier);
+      setTimeLeft(TURN_TIME_LIMIT);
 
-    setGameOver(true);
-    setStage("result");
+      if (result.gameOver) {
+        await handleGameEnd(result.hasWon);
+      } else if (!isCpu) {
+        setIsCpuTurn(true);
+        setTimerActive(false);
+        // CPU turn logic remains similar but uses server validation
+      }
+    } catch (error) {
+      console.error("Failed to submit guess:", error);
+      // Handle error appropriately
+    }
   };
 
-  const handleGuess = (guess, isCpu = false) => {
-    const numericGuess = parseInt(guess, 10);
+  // Modified handleGameEnd to use server endpoint
+  const handleGameEnd = async (hasWon) => {
+    try {
+      const result = await gameService.endGameSession();
 
-    // Reset timer to 15s for player's next turn
-    if (isCpu) {
-      setTimeLeft(TURN_TIME_LIMIT);
-    }
-
-    // First, increment player turns if it's a player turn
-    if (!isCpu) {
-      setPlayerTurns((prev) => {
-        const newPlayerTurns = prev + 1;
-        const turnMultiplier =
-          TURN_MULTIPLIERS[newPlayerTurns] || TURN_MULTIPLIERS[0];
-        setCurrentMultiplier(turnMultiplier);
-        return newPlayerTurns;
+      setFinalPoints({
+        previousBalance: result.previousBalance,
+        earned: result.earned,
+        newBalance: result.newBalance,
       });
+
+      // Update user context with new balance
+      setUser((prev) => ({
+        ...prev,
+        points: result.newBalance,
+      }));
+
+      setGameOver(true);
+      setStage("result");
+    } catch (error) {
+      console.error("Failed to end game:", error);
+      // Handle error appropriately
     }
+  };
 
-    setTurns((prev) => prev + 1);
-
-    if (!isCpu && playerTurns + 1 > MAX_TURNS) {
-      handleGameEnd(false);
-      return;
+  // Modified resetGame to create new session
+  const resetGame = async () => {
+    try {
+      const newSession = await gameService.createGameSession();
+      setSessionId(newSession.id);
+      resetLocalState(newSession);
+    } catch (error) {
+      console.error("Failed to reset game:", error);
+      // Handle error appropriately
     }
+  };
 
-    if (numericGuess === secretNumber) {
-      // Use current player turns for multiplier (since we already incremented)
-      const finalMultiplier = TURN_MULTIPLIERS[playerTurns];
-
-      setCurrentMultiplier(finalMultiplier);
-      handleGameEnd(true);
-      return;
-    }
-
-    if (numericGuess < secretNumber) {
-      setMinRange(numericGuess);
-      setGuessedRanges([
-        ...guessedRanges,
-        { min: minRange, max: numericGuess },
-      ]);
-      setUserGuess(numericGuess.toString());
-
-      if (!isCpu) {
-        setIsCpuTurn(true);
-        setTimerActive(false);
-        // Clear any existing feedback
-        setCpuFeedback(null);
-
-        // Sequence for CPU turn with timing:
-        // 1. Show loading for 2 seconds
-        // 2. Show feedback for 1.5 seconds
-        // 3. Return to player's turn
-        setTimeout(() => {
-          const cpuGuess = Math.floor((minRange + maxRange) / 2);
-          setCpuFeedback(cpuGuess > secretNumber ? "LOWER!" : "HIGHER!");
-
-          // Handle CPU's guess after showing feedback
-          setTimeout(() => {
-            handleGuess(cpuGuess, true);
-            setIsCpuTurn(false);
-            setCpuFeedback(null);
-            setTimerActive(true);
-          }, 1500); // Time to show feedback
-        }, 2000); // Time to show loading
-      }
-    } else if (numericGuess > secretNumber) {
-      setMaxRange(numericGuess);
-      setGuessedRanges([
-        ...guessedRanges,
-        { min: numericGuess, max: maxRange },
-      ]);
-      setUserGuess(numericGuess.toString());
-
-      if (!isCpu) {
-        setIsCpuTurn(true);
-        setTimerActive(false);
-        setCpuFeedback(null);
-
-        setTimeout(() => {
-          const cpuGuess = Math.floor((minRange + maxRange) / 2);
-          setCpuFeedback(cpuGuess > secretNumber ? "LOWER!" : "HIGHER!");
-
-          setTimeout(() => {
-            handleGuess(cpuGuess, true);
-            setIsCpuTurn(false);
-            setCpuFeedback(null);
-            setTimerActive(true);
-          }, 1500);
-        }, 2000);
-      }
-    }
+  // Helper function to reset local state
+  const resetLocalState = (sessionData) => {
+    setSecretNumber(null); // Server knows the secret number
+    setUserGuess("");
+    setFeedback("");
+    setTurns(0);
+    setPlayerTurns(0);
+    setMultiplier(20);
+    setScore(0);
+    setHasWon(false);
+    setMinRange(1);
+    setMaxRange(256);
+    setGuessedRanges([]);
+    setIsCpuTurn(false);
+    setGameOver(false);
+    setTimeLeft(TURN_TIME_LIMIT);
+    setTimerActive(true);
+    setCurrentMultiplier(TURN_MULTIPLIERS[0]);
+    setFinalPoints({
+      previousBalance: 0,
+      earned: 0,
+      newBalance: 0,
+    });
   };
 
   const handleGuessSubmit = () => {

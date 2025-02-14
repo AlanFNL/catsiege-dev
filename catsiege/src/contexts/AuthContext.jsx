@@ -76,10 +76,6 @@ export function AuthProvider({ children }) {
     checkAuth,
   };
 
-  if (loading) {
-    return <div>Loading...</div>;
-  }
-
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

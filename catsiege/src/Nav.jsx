@@ -51,12 +51,19 @@ const dropdownVariants = {
   },
 };
 
+const AuthSkeleton = () => (
+  <div className="hidden md:flex items-center gap-4">
+    <div className="h-4 w-16 bg-[#FFF5E4]/10 animate-pulse rounded"></div>
+    <div className="h-4 w-16 bg-[#FFF5E4]/10 animate-pulse rounded"></div>
+  </div>
+);
+
 export default function Nav() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isRewardsOpen, setIsRewardsOpen] = useState(false);
   const [isWalletOpen, setIsWalletOpen] = useState(false);
-  const { user, logout } = useAuth();
+  const { user, logout, loading } = useAuth();
   const navigate = useNavigate();
 
   // Close dropdown when clicking outside
@@ -127,10 +134,12 @@ export default function Nav() {
             </motion.div>
           ))}
 
-          {user ? (
+          {loading ? (
+            <AuthSkeleton />
+          ) : user ? (
             <div className="relative flex items-center gap-6 -mt-1">
               <div className="flex items-center gap-2">
-                <img src={points} />
+                <img src={points} alt="Points" />
                 <span className="text-2xl text-[#FFF5E4]/70">
                   {user.points || 0}
                 </span>
@@ -142,7 +151,6 @@ export default function Nav() {
                 whileTap={{ scale: 0.95 }}
               >
                 <User size={20} />
-
                 <ChevronDown size={16} />
               </motion.button>
 
@@ -195,7 +203,7 @@ export default function Nav() {
               </AnimatePresence>
             </div>
           ) : (
-            <>
+            <div className="hidden md:flex space-x-4 lg:space-x-8">
               <RouterLink
                 to="/login"
                 className="text-sm lg:text-base hover:text-gray-300 cursor-pointer"
@@ -208,7 +216,7 @@ export default function Nav() {
               >
                 SIGN UP
               </RouterLink>
-            </>
+            </div>
           )}
         </div>
 
@@ -239,7 +247,13 @@ export default function Nav() {
                 {item.name}
               </RouterLink>
             ))}
-            {user ? (
+
+            {loading ? (
+              <div className="py-2">
+                <div className="h-4 w-20 bg-[#FFF5E4]/10 animate-pulse rounded mb-2"></div>
+                <div className="h-4 w-20 bg-[#FFF5E4]/10 animate-pulse rounded"></div>
+              </div>
+            ) : user ? (
               <>
                 <RouterLink
                   to="/rewards"
