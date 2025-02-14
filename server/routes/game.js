@@ -95,7 +95,7 @@ router.post('/guess', isAuthenticated, async (req, res) => {
     }
 
     // Calculate new multiplier based on turns
-    const multiplierIndex = Math.min(7, Math.floor(session.turns / 2));
+    const multiplierIndex = Math.min(7, Math.floor(session.playerTurns));
     session.currentMultiplier = TURN_MULTIPLIERS[multiplierIndex];
 
     // Process guess
@@ -133,18 +133,15 @@ router.post('/guess', isAuthenticated, async (req, res) => {
     await session.save();
 
     res.json({
-      result: guess === session.secretNumber ? 'win' : 'continue',
+      result: 'continue',
+      secretNumber: session.secretNumber,
       minRange: session.minRange,
       maxRange: session.maxRange,
       turns: session.turns,
       playerTurns: session.playerTurns,
       currentMultiplier: session.currentMultiplier,
       isCpuTurn: session.isCpuTurn,
-      timeLeft: session.timeLeft,
-      ...(guess === session.secretNumber && {
-        winnings: ENTRY_PRICE * session.currentMultiplier,
-        newBalance: user.points
-      })
+      timeLeft: session.timeLeft
     });
 
   } catch (error) {

@@ -78,6 +78,9 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
   const [sessionId, setSessionId] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Add loading state for guess button
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   // Initialize or resume game session
   useEffect(() => {
     const initializeGame = async () => {
@@ -121,8 +124,8 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
     if (isCpuTurn && !gameOver) {
       timeoutId = setTimeout(async () => {
         try {
-          // CPU makes a guess using binary search
           const cpuGuess = Math.floor((minRange + maxRange) / 2);
+          setCpuFeedback(`CPU guesses: ${cpuGuess}`);
 
           const result = await gameService.submitGuess({
             guess: cpuGuess,
@@ -130,10 +133,18 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
           });
 
           if (result.result === "win") {
+            setCpuFeedback("CPU won!");
             setHasWon(false);
             handleGameEnd(false, result);
           } else {
-            // Update game state based on server response
+            // Set CPU feedback based on comparison
+            if (cpuGuess < result.secretNumber) {
+              setCpuFeedback(`CPU guessed ${cpuGuess} - Higher!`);
+            } else {
+              setCpuFeedback(`CPU guessed ${cpuGuess} - Lower!`);
+            }
+
+            // Update game state
             setMinRange(result.minRange);
             setMaxRange(result.maxRange);
             setTurns(result.turns);
@@ -145,6 +156,7 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
           }
         } catch (error) {
           console.error("CPU guess failed:", error);
+          setCpuFeedback("CPU turn failed");
         }
       }, 2000);
     }
@@ -164,26 +176,19 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
     }
 
     // Handle time running out
-    if (timeLeft === 0 && !isCpuTurn) {
-      // Generate random guess within current range
-      const randomGuess =
-        Math.floor(Math.random() * (maxRange - minRange + 1)) + minRange;
-
-      // Update user's guess display
-      setUserGuess(randomGuess.toString());
-
-      // Handle the guess
-      handleGuess(randomGuess);
-
-      // Reset timer and switch turns
-      setTimeLeft(TURN_TIME_LIMIT);
-      setTimerActive(false);
+    if (timeLeft === 0 && !isCpuTurn && !gameOver) {
+      const handleTimeout = async () => {
+        setTimerActive(false);
+        const randomGuess =
+          Math.floor(Math.random() * (maxRange - minRange + 1)) + minRange;
+        setUserGuess(randomGuess.toString());
+        await handleGuessSubmit();
+      };
+      handleTimeout();
     }
 
     return () => {
-      if (timerId) {
-        clearInterval(timerId);
-      }
+      if (timerId) clearInterval(timerId);
     };
   }, [timeLeft, timerActive, isCpuTurn, gameOver, minRange, maxRange]);
 
@@ -308,17 +313,28 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
     });
   };
 
+  // Modified handleGuessSubmit to include loading state and feedback
   const handleGuessSubmit = async () => {
-    if (!isCpuTurn && !gameOver && userGuess) {
+    if (!isCpuTurn && !gameOver && userGuess && !isSubmitting) {
+      setIsSubmitting(true);
       try {
         const result = await gameService.submitGuess({
           guess: parseInt(userGuess),
         });
 
         if (result.result === "win") {
+          setFeedback("Correct! You won!");
           setHasWon(true);
           handleGameEnd(true, result);
         } else {
+          // Set feedback based on comparison
+          const guessNum = parseInt(userGuess);
+          if (guessNum < result.secretNumber) {
+            setFeedback("Higher!");
+          } else {
+            setFeedback("Lower!");
+          }
+
           // Update game state based on server response
           setMinRange(result.minRange);
           setMaxRange(result.maxRange);
@@ -332,7 +348,9 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
         }
       } catch (error) {
         console.error("Failed to submit guess:", error);
-        // Handle error appropriately
+        setFeedback("Error submitting guess. Please try again.");
+      } finally {
+        setIsSubmitting(false);
       }
     }
   };
@@ -474,17 +492,25 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
 
               {/* Submit Button */}
               <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                disabled={!userGuess}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={handleGuessWithCooldown}
-                className="w-full max-w-md mx-auto h-16 bg-gradient-to-r from-[#FFF5E4]/10 via-[#FFF5E4]/20 to-[#FFF5E4]/10 
-                          hover:from-[#FFF5E4]/20 hover:via-[#FFF5E4]/30 hover:to-[#FFF5E4]/20
-                          border border-[#FFF5E4]/30 rounded-lg text-[#FFF5E4] font-bold text-xl
-                          disabled:opacity-50 disabled:cursor-not-allowed
-                          transition-all duration-300 flex items-center justify-center"
+                disabled={
+                  isSubmitting ||
+                  isGuessButtonDisabled ||
+                  !userGuess ||
+                  isCpuTurn
+                }
+                className="px-6 py-2 font-bold bg-[#FFF5E4]/10 hover:bg-[#FFF5E4]/20 text-[#FFF5E4] rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                CHOOSE NUMBER
+                {isSubmitting ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-[#FFF5E4]/20 border-t-[#FFF5E4] rounded-full animate-spin" />
+                    <span>Submitting...</span>
+                  </div>
+                ) : (
+                  "Choose Number"
+                )}
               </motion.button>
             </div>
           </div>
@@ -536,7 +562,7 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
                     {/* Show CPU's calculated guess */}
                     {cpuFeedback && (
                       <div className="text-2xl text-[#FFF5E4]/80 mb-4">
-                        CPU guesses: {Math.floor((minRange + maxRange) / 2)}
+                        {cpuFeedback}
                       </div>
                     )}
 
