@@ -71,7 +71,7 @@ export default function Footer() {
 
         {/* Copyright */}
         <div className="text-center mt-8 text-sm">
-          © 2024 ALL RIGHTS RESERVED
+          © 2025 ALL RIGHTS RESERVED
         </div>
       </div>
     </footer>
