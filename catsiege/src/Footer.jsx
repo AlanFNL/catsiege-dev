@@ -3,6 +3,7 @@ import twitter from "./assets/twitter.svg";
 import ig from "./assets/ig.svg";
 import circleArrow from "./assets/circlearrow.png";
 import nftCalendar from "./assets/nftcalendar.png";
+import discord from "./assets/discord1.svg";
 export default function Footer() {
   return (
     <footer className="relative bg-black text-white py-8">
@@ -34,6 +35,14 @@ export default function Footer() {
                 className="hover:text-gray-300"
               >
                 <img src={ig} />
+              </a>
+              <a
+                href="https://discord.gg/jTfQ42YKbq"
+                target="_blank"
+                rel="noopener"
+                className="hover:text-gray-300 h-6 w-6"
+              >
+                <img src={discord} />
               </a>
               <a
                 href="https://x.com/catsiege"
