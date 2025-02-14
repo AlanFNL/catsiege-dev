@@ -199,7 +199,7 @@ export const gameService = {
 
   // Create or resume a game session
   createGameSession: async () => {
-    const response = await fetch(`${API_URL}/game/session/create`, {
+    const response = await fetch(`/game/session/create`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('tokenCat')}`,
@@ -211,7 +211,7 @@ export const gameService = {
 
   // Get current game session
   getGameSession: async () => {
-    const response = await fetch(`${API_URL}/game/session`, {
+    const response = await fetch(`/game/session`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('tokenCat')}`,
       },
@@ -221,7 +221,7 @@ export const gameService = {
 
   // Submit a guess
   submitGuess: async (guess) => {
-    const response = await fetch(`${API_URL}/game/guess`, {
+    const response = await fetch(`/game/guess`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('tokenCat')}`,
@@ -234,7 +234,7 @@ export const gameService = {
 
   // End game session
   endGameSession: async () => {
-    const response = await fetch(`${API_URL}/game/session/end`, {
+    const response = await fetch(`/game/session/end`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('tokenCat')}`,
