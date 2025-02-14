@@ -63,7 +63,7 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
   );
   const { user, setUser } = useAuth();
   const ENTRY_PRICE = 5;
-  const [cpuFeedback, setCpuFeedback] = useState(null);
+  const [cpuState, setCpuState] = useState({ guess: null, feedback: null });
   const [finalPoints, setFinalPoints] = useState({
     previousBalance: 0,
     earned: 0,
@@ -244,12 +244,10 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
   const handleGuess = (guess, isCpu = false) => {
     const numericGuess = parseInt(guess, 10);
 
-    // Reset timer to 15s for player's next turn
     if (isCpu) {
       setTimeLeft(TURN_TIME_LIMIT);
     }
 
-    // First, increment player turns if it's a player turn
     if (!isCpu) {
       setPlayerTurns((prev) => {
         const newPlayerTurns = prev + 1;
@@ -268,16 +266,15 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
     }
 
     if (numericGuess === secretNumber) {
-      // Use current player turns for multiplier (since we already incremented)
       const finalMultiplier = TURN_MULTIPLIERS[playerTurns];
-
       setCurrentMultiplier(finalMultiplier);
       handleGameEnd(true);
       return;
     }
 
     if (numericGuess < secretNumber) {
-      setMinRange(numericGuess);
+      const newMin = numericGuess;
+      setMinRange(newMin);
       setGuessedRanges([
         ...guessedRanges,
         { min: minRange, max: numericGuess },
@@ -287,28 +284,24 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
       if (!isCpu) {
         setIsCpuTurn(true);
         setTimerActive(false);
-        // Clear any existing feedback
-        setCpuFeedback(null);
 
-        // Sequence for CPU turn with timing:
-        // 1. Show loading for 2 seconds
-        // 2. Show feedback for 1.5 seconds
-        // 3. Return to player's turn
+        // Calculate CPU guess once and store it
+        const cpuGuess = Math.floor((newMin + maxRange) / 2);
+
         setTimeout(() => {
-          const cpuGuess = Math.floor((minRange + maxRange) / 2);
-          setCpuFeedback(cpuGuess > secretNumber ? "LOWER!" : "HIGHER!");
+          setCpuState({ guess: cpuGuess, feedback: "HIGHER!" });
 
-          // Handle CPU's guess after showing feedback
           setTimeout(() => {
             handleGuess(cpuGuess, true);
             setIsCpuTurn(false);
-            setCpuFeedback(null);
+            setCpuState({ guess: null, feedback: null });
             setTimerActive(true);
-          }, 1500); // Time to show feedback
-        }, 2000); // Time to show loading
+          }, 1500);
+        }, 2000);
       }
     } else if (numericGuess > secretNumber) {
-      setMaxRange(numericGuess);
+      const newMax = numericGuess;
+      setMaxRange(newMax);
       setGuessedRanges([
         ...guessedRanges,
         { min: numericGuess, max: maxRange },
@@ -318,16 +311,17 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
       if (!isCpu) {
         setIsCpuTurn(true);
         setTimerActive(false);
-        setCpuFeedback(null);
+
+        // Calculate CPU guess once and store it
+        const cpuGuess = Math.floor((minRange + newMax) / 2);
 
         setTimeout(() => {
-          const cpuGuess = Math.floor((minRange + maxRange) / 2);
-          setCpuFeedback(cpuGuess > secretNumber ? "LOWER!" : "HIGHER!");
+          setCpuState({ guess: cpuGuess, feedback: "LOWER!" });
 
           setTimeout(() => {
             handleGuess(cpuGuess, true);
             setIsCpuTurn(false);
-            setCpuFeedback(null);
+            setCpuState({ guess: null, feedback: null });
             setTimerActive(true);
           }, 1500);
         }, 2000);
@@ -524,8 +518,8 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
                     {/* Opponent Image with Conditional Glow */}
                     <div
                       className={`relative rounded-full overflow-hidden mb-8 ${
-                        cpuFeedback
-                          ? cpuFeedback === "HIGHER!"
+                        cpuState.feedback
+                          ? cpuState.feedback === "HIGHER!"
                             ? "shadow-[0_0_30px_rgba(34,197,94,0.5)]"
                             : "shadow-[0_0_30px_rgba(239,68,68,0.5)]"
                           : ""
@@ -539,14 +533,14 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
                     </div>
 
                     {/* Show CPU's calculated guess */}
-                    {cpuFeedback && (
+                    {cpuState.guess !== null && (
                       <div className="text-2xl text-[#FFF5E4]/80 mb-4">
-                        CPU guesses: {Math.floor((minRange + maxRange) / 2)}
+                        CPU guesses: {cpuState.guess}
                       </div>
                     )}
 
                     {/* Loading Animation when no feedback */}
-                    {!cpuFeedback && (
+                    {!cpuState.feedback && (
                       <div className="flex gap-2 justify-center mb-4">
                         <motion.div
                           animate={{
@@ -591,19 +585,19 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
 
                     {/* Feedback Text */}
                     <AnimatePresence mode="wait">
-                      {cpuFeedback && (
+                      {cpuState.feedback && (
                         <motion.div
                           variants={feedbackVariants}
                           initial="hidden"
                           animate="visible"
                           exit="exit"
                           className={`text-6xl font-bold ${
-                            cpuFeedback === "HIGHER!"
+                            cpuState.feedback === "HIGHER!"
                               ? "text-green-500"
                               : "text-red-500"
                           }`}
                         >
-                          {cpuFeedback}
+                          {cpuState.feedback}
                         </motion.div>
                       )}
                     </AnimatePresence>

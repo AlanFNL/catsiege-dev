@@ -74,7 +74,7 @@ export const authService = {
         })) || []
       };
 
-      console.log(userData)
+
       return userData;
     } catch (error) {
       console.error('Me error:', error.response || error);
