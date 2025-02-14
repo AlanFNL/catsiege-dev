@@ -119,19 +119,40 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
     let timeoutId;
 
     if (isCpuTurn && !gameOver) {
-      const cpuGuess = Math.floor((minRange + maxRange) / 2);
+      timeoutId = setTimeout(async () => {
+        try {
+          // CPU makes a guess using binary search
+          const cpuGuess = Math.floor((minRange + maxRange) / 2);
 
-      timeoutId = setTimeout(() => {
-        handleGuess(cpuGuess, true);
+          const result = await gameService.submitGuess({
+            guess: cpuGuess,
+            isCpu: true,
+          });
+
+          if (result.result === "win") {
+            setHasWon(false);
+            handleGameEnd(false, result);
+          } else {
+            // Update game state based on server response
+            setMinRange(result.minRange);
+            setMaxRange(result.maxRange);
+            setTurns(result.turns);
+            setPlayerTurns(result.playerTurns);
+            setCurrentMultiplier(result.currentMultiplier);
+            setIsCpuTurn(result.isCpuTurn);
+            setTimeLeft(TURN_TIME_LIMIT);
+            setTimerActive(!result.isCpuTurn);
+          }
+        } catch (error) {
+          console.error("CPU guess failed:", error);
+        }
       }, 2000);
     }
 
     return () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
+      if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [isCpuTurn]);
+  }, [isCpuTurn, minRange, maxRange, gameOver]);
 
   useEffect(() => {
     let timerId;
@@ -287,9 +308,32 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
     });
   };
 
-  const handleGuessSubmit = () => {
-    if (!isCpuTurn && !gameOver) {
-      handleGuess(userGuess);
+  const handleGuessSubmit = async () => {
+    if (!isCpuTurn && !gameOver && userGuess) {
+      try {
+        const result = await gameService.submitGuess({
+          guess: parseInt(userGuess),
+        });
+
+        if (result.result === "win") {
+          setHasWon(true);
+          handleGameEnd(true, result);
+        } else {
+          // Update game state based on server response
+          setMinRange(result.minRange);
+          setMaxRange(result.maxRange);
+          setTurns(result.turns);
+          setPlayerTurns(result.playerTurns);
+          setCurrentMultiplier(result.currentMultiplier);
+          setIsCpuTurn(result.isCpuTurn);
+          setTimeLeft(TURN_TIME_LIMIT);
+          setTimerActive(!result.isCpuTurn);
+          setUserGuess(""); // Clear the guess after submission
+        }
+      } catch (error) {
+        console.error("Failed to submit guess:", error);
+        // Handle error appropriately
+      }
     }
   };
 
@@ -312,13 +356,12 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
   }, []);
 
   // Add button cooldown after guess
-  const handleGuessWithCooldown = () => {
-    if (isGuessButtonDisabled) return;
+  const handleGuessWithCooldown = async () => {
+    if (isGuessButtonDisabled || !userGuess) return;
 
     setIsGuessButtonDisabled(true);
-    handleGuessSubmit();
+    await handleGuessSubmit();
 
-    // Enable button after 1 second
     setTimeout(() => {
       setIsGuessButtonDisabled(false);
     }, 1000);

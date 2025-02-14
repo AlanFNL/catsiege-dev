@@ -133,13 +133,18 @@ router.post('/guess', isAuthenticated, async (req, res) => {
     await session.save();
 
     res.json({
-      result: 'continue',
+      result: guess === session.secretNumber ? 'win' : 'continue',
       minRange: session.minRange,
       maxRange: session.maxRange,
       turns: session.turns,
       playerTurns: session.playerTurns,
       currentMultiplier: session.currentMultiplier,
-      isCpuTurn: session.isCpuTurn
+      isCpuTurn: session.isCpuTurn,
+      timeLeft: session.timeLeft,
+      ...(guess === session.secretNumber && {
+        winnings: ENTRY_PRICE * session.currentMultiplier,
+        newBalance: user.points
+      })
     });
 
   } catch (error) {
