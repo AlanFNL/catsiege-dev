@@ -79,14 +79,25 @@ router.get('/admin-stats', isAuthenticated, isAdmin, async (req, res) => {
     // Get total games played
     const totalGames = await GameStat.countDocuments();
     
-    // Get recent games with user info
+    // Get recent games with user info (increased to 100)
     const recentGames = await GameStat.find()
       .populate('userId', 'email')
       .sort({ timestamp: -1 })
-      .limit(15)
+      .limit(100)
       .lean();
-    
-    // Get average stats
+
+    // Get unique players count
+    const uniquePlayers = await GameStat.distinct('userId');
+    const uniquePlayersCount = uniquePlayers.length;
+
+    // Calculate games in last 7 days
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const gamesLastWeek = await GameStat.countDocuments({
+      timestamp: { $gte: sevenDaysAgo }
+    });
+
+    // Get average stats including games per account
     const stats = await GameStat.aggregate([
       {
         $group: {
@@ -98,9 +109,17 @@ router.get('/admin-stats', isAuthenticated, isAdmin, async (req, res) => {
       }
     ]);
 
+    // Calculate average games per account
+    const avgGamesPerAccount = uniquePlayersCount > 0 
+      ? Number((totalGames / uniquePlayersCount).toFixed(1))
+      : 0;
+
     // Format the response with proper number formatting
     const formattedResponse = {
       totalGames,
+      uniquePlayers: uniquePlayersCount,
+      gamesLastWeek,
+      avgGamesPerAccount,
       recentGames: recentGames.map(game => ({
         _id: game._id,
         timestamp: game.timestamp,

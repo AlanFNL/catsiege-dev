@@ -8,6 +8,9 @@ const AdminDashboard = () => {
   const [stats, setStats] = useState({
     recentGames: [],
     totalGames: 0,
+    uniquePlayers: 0,
+    gamesLastWeek: 0,
+    avgGamesPerAccount: 0,
     averages: {
       avgRoi: 0,
       avgTurns: 0,
@@ -24,6 +27,9 @@ const AdminDashboard = () => {
         setStats({
           recentGames: data.recentGames || [],
           totalGames: data.totalGames || 0,
+          uniquePlayers: data.uniquePlayers || 0,
+          gamesLastWeek: data.gamesLastWeek || 0,
+          avgGamesPerAccount: data.avgGamesPerAccount || 0,
           averages: {
             avgRoi: data.statistics?.avgRoi || 0,
             avgTurns: data.statistics?.avgTurns || 0,
@@ -89,7 +95,7 @@ const AdminDashboard = () => {
           onClick={() => navigate("/")}
         />
 
-        {/* Stats Overview */}
+        {/* Stats Overview - Now 6 boxes in 2 rows */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -123,6 +129,38 @@ const AdminDashboard = () => {
             <p className="text-4xl font-bold">
               x{stats.averages.avgMultiplier}
             </p>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="bg-gradient-to-br from-[#2a2a2a] to-[#1f1f1f] p-6 rounded-xl border border-[#FFF5E4]/10"
+          >
+            <h3 className="text-[#FBE294] text-lg mb-2">Unique Players</h3>
+            <p className="text-4xl font-bold">{stats.uniquePlayers}</p>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="bg-gradient-to-br from-[#2a2a2a] to-[#1f1f1f] p-6 rounded-xl border border-[#FFF5E4]/10"
+          >
+            <h3 className="text-[#FBE294] text-lg mb-2">Games Last 7 Days</h3>
+            <p className="text-4xl font-bold">{stats.gamesLastWeek}</p>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="bg-gradient-to-br from-[#2a2a2a] to-[#1f1f1f] p-6 rounded-xl border border-[#FFF5E4]/10"
+          >
+            <h3 className="text-[#FBE294] text-lg mb-2">
+              Avg Games per Account
+            </h3>
+            <p className="text-4xl font-bold">{stats.avgGamesPerAccount}</p>
           </motion.div>
         </div>
 
