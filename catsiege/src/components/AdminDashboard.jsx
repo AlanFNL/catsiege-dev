@@ -9,6 +9,7 @@ const AdminDashboard = () => {
     recentGames: [],
     totalGames: 0,
     uniquePlayers: 0,
+    totalAccounts: 0,
     gamesLastWeek: 0,
     avgGamesPerAccount: 0,
     averages: {
@@ -28,6 +29,7 @@ const AdminDashboard = () => {
           recentGames: data.recentGames || [],
           totalGames: data.totalGames || 0,
           uniquePlayers: data.uniquePlayers || 0,
+          totalAccounts: data.totalAccounts || 0,
           gamesLastWeek: data.gamesLastWeek || 0,
           avgGamesPerAccount: data.avgGamesPerAccount || 0,
           averages: {
@@ -139,6 +141,9 @@ const AdminDashboard = () => {
           >
             <h3 className="text-[#FBE294] text-lg mb-2">Unique Players</h3>
             <p className="text-4xl font-bold">{stats.uniquePlayers}</p>
+            <p className="text-sm text-[#FFF5E4]/60 mt-2">
+              out of {stats.totalAccounts} total accounts
+            </p>
           </motion.div>
 
           <motion.div
