@@ -170,16 +170,20 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
 
   // Calculate winnings with decimal precision
   const calculateWinnings = () => {
-    if (!currentMultiplier) return 0;
+    if (!currentMultiplier) return -ENTRY_PRICE;
 
     // Calculate total winnings (entry price * multiplier)
     const totalWinnings = ENTRY_PRICE * currentMultiplier;
 
-    // Calculate net winnings (total winnings - entry price)
-    const netWinnings = totalWinnings - ENTRY_PRICE;
+    // If multiplier is less than 1, we lose money
+    if (currentMultiplier < 1) {
+      // Calculate loss (difference between entry price and what we got back)
+      return Number(-(ENTRY_PRICE - totalWinnings).toFixed(2));
+    }
 
-    // Round to 2 decimal places
-    return Number(netWinnings.toFixed(2));
+    // For multipliers greater than 1, calculate profit
+    const profit = totalWinnings - ENTRY_PRICE;
+    return Number(profit.toFixed(2));
   };
 
   const handleGameEnd = async (hasWon) => {
@@ -640,15 +644,15 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="fixed inset-0 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+          className="fixed inset-0 flex items-center justify-center bg-black/80 backdrop-blur-sm z-[200]"
         >
-          <div className="relative max-w-2xl w-[90vw] flex flex-col items-center">
+          <div className="relative max-w-2xl w-[90vw] flex flex-col items-center z-[200] ">
             {/* Top Banner */}
             <motion.div
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="w-full bg-gradient-to-r from-[#1a1a1a] via-[#2a2a2a] to-[#1a1a1a] rounded-t-xl border-t border-x border-[#FFF5E4]/20 p-8"
+              className="w-full bg-gradient-to-r from-[#1a1a1a] via-[#2a2a2a] to-[#1a1a1a] rounded-t-xl border-t border-x border-[#FFF5E4]/20 p-8 z-[200]"
             >
               <h1 className="text-4xl font-bold text-center text-[#FFF5E4] tracking-wider">
                 CONGRATULATIONS!
@@ -704,7 +708,7 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
                   <div className="flex justify-between items-center">
                     <span className="text-[#FFF5E4]/70">Points Earned:</span>
                     <span className="text-green-400 font-bold">
-                      +{finalPoints.earned.toFixed(2)} points
+                      {finalPoints.earned.toFixed(2)} points
                     </span>
                   </div>
                 </div>
