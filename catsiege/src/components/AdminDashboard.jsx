@@ -175,44 +175,48 @@ const AdminDashboard = () => {
             Recent Games
           </h2>
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-black/20">
-                <tr>
-                  <th className="px-6 py-4 text-left text-[#FBE294]">User</th>
-                  <th className="px-6 py-4 text-left text-[#FBE294]">Date</th>
-                  <th className="px-6 py-4 text-left text-[#FBE294]">Turns</th>
-                  <th className="px-6 py-4 text-left text-[#FBE294]">
-                    Multiplier
-                  </th>
-                  <th className="px-6 py-4 text-left text-[#FBE294]">ROI</th>
-                </tr>
-              </thead>
-              <tbody>
-                {stats.recentGames.map((game) => (
-                  <tr
-                    key={game._id}
-                    className="border-t border-[#FFF5E4]/5 hover:bg-[#FFF5E4]/5"
-                  >
-                    <td className="px-6 py-4">{game.userEmail}</td>
-                    <td className="px-6 py-4">
-                      {new Date(game.timestamp).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4">{game.turnsToWin}</td>
-                    <td className="px-6 py-4">x{game.endingMultiplier}</td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={
-                          game.roi > 0 ? "text-green-400" : "text-red-400"
-                        }
-                      >
-                        {game.roi > 0 ? "+" : ""}
-                        {game.roi}
-                      </span>
-                    </td>
+            <div className="max-h-[700px] overflow-y-auto">
+              <table className="w-full">
+                <thead className="bg-black/20 sticky top-0">
+                  <tr>
+                    <th className="px-6 py-4 text-left text-[#FBE294]">User</th>
+                    <th className="px-6 py-4 text-left text-[#FBE294]">Date</th>
+                    <th className="px-6 py-4 text-left text-[#FBE294]">
+                      Turns
+                    </th>
+                    <th className="px-6 py-4 text-left text-[#FBE294]">
+                      Multiplier
+                    </th>
+                    <th className="px-6 py-4 text-left text-[#FBE294]">ROI</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {stats.recentGames.map((game) => (
+                    <tr
+                      key={game._id}
+                      className="border-t border-[#FFF5E4]/5 hover:bg-[#FFF5E4]/5"
+                    >
+                      <td className="px-6 py-4">{game.userEmail}</td>
+                      <td className="px-6 py-4">
+                        {new Date(game.timestamp).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4">{game.turnsToWin}</td>
+                      <td className="px-6 py-4">x{game.endingMultiplier}</td>
+                      <td className="px-6 py-4">
+                        <span
+                          className={
+                            game.roi > 0 ? "text-green-400" : "text-red-400"
+                          }
+                        >
+                          {game.roi > 0 ? "+" : ""}
+                          {game.roi}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </motion.div>
       </motion.div>
