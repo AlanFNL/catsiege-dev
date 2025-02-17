@@ -12,6 +12,11 @@ const AdminDashboard = () => {
     totalAccounts: 0,
     gamesLastWeek: 0,
     avgGamesPerAccount: 0,
+    userStats: {
+      registeredToday: 0,
+      registeredLastWeek: 0,
+      registeredLastFifteenDays: 0,
+    },
     averages: {
       avgRoi: 0,
       avgTurns: 0,
@@ -32,6 +37,12 @@ const AdminDashboard = () => {
           totalAccounts: data.totalAccounts || 0,
           gamesLastWeek: data.gamesLastWeek || 0,
           avgGamesPerAccount: data.avgGamesPerAccount || 0,
+          userStats: {
+            registeredToday: data.userStats?.registeredToday || 0,
+            registeredLastWeek: data.userStats?.registeredLastWeek || 0,
+            registeredLastFifteenDays:
+              data.userStats?.registeredLastFifteenDays || 0,
+          },
           averages: {
             avgRoi: data.statistics?.avgRoi || 0,
             avgTurns: data.statistics?.avgTurns || 0,
@@ -168,6 +179,43 @@ const AdminDashboard = () => {
             <p className="text-4xl font-bold">{stats.avgGamesPerAccount}</p>
           </motion.div>
         </div>
+
+        {/* Add this after your existing stats grid */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
+          className="mb-12 bg-gradient-to-br from-[#2a2a2a] to-[#1f1f1f] p-6 rounded-xl border border-[#FFF5E4]/10"
+        >
+          <h2 className="text-2xl font-bold mb-6 text-[#FBE294]">
+            User Registration Stats
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="p-4 bg-black/20 rounded-lg">
+              <h3 className="text-[#FBE294] text-lg mb-2">Today</h3>
+              <p className="text-3xl font-bold">
+                {stats.userStats.registeredToday}
+              </p>
+              <p className="text-sm text-[#FFF5E4]/60 mt-1">new users</p>
+            </div>
+
+            <div className="p-4 bg-black/20 rounded-lg">
+              <h3 className="text-[#FBE294] text-lg mb-2">Last 7 Days</h3>
+              <p className="text-3xl font-bold">
+                {stats.userStats.registeredLastWeek}
+              </p>
+              <p className="text-sm text-[#FFF5E4]/60 mt-1">new users</p>
+            </div>
+
+            <div className="p-4 bg-black/20 rounded-lg">
+              <h3 className="text-[#FBE294] text-lg mb-2">Last 15 Days</h3>
+              <p className="text-3xl font-bold">
+                {stats.userStats.registeredLastFifteenDays}
+              </p>
+              <p className="text-sm text-[#FFF5E4]/60 mt-1">new users</p>
+            </div>
+          </div>
+        </motion.div>
 
         {/* Recent Games Table */}
         <motion.div

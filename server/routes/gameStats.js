@@ -91,9 +91,30 @@ router.get('/admin-stats', isAuthenticated, isAdmin, async (req, res) => {
     const uniquePlayersCount = uniquePlayers.length;
     const totalAccounts = await mongoose.model('User').countDocuments();
 
-    // Calculate games in last 7 days
+    // Calculate dates for user registration stats
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    
+    const fifteenDaysAgo = new Date();
+    fifteenDaysAgo.setDate(fifteenDaysAgo.getDate() - 15);
+
+    // Get user registration counts
+    const [usersToday, usersLastWeek, usersLastFifteenDays] = await Promise.all([
+      mongoose.model('User').countDocuments({
+        createdAt: { $gte: today }
+      }),
+      mongoose.model('User').countDocuments({
+        createdAt: { $gte: sevenDaysAgo }
+      }),
+      mongoose.model('User').countDocuments({
+        createdAt: { $gte: fifteenDaysAgo }
+      })
+    ]);
+
+    // Get games in last 7 days
     const gamesLastWeek = await GameStat.countDocuments({
       timestamp: { $gte: sevenDaysAgo }
     });
@@ -121,6 +142,11 @@ router.get('/admin-stats', isAuthenticated, isAdmin, async (req, res) => {
       totalAccounts,
       gamesLastWeek,
       avgGamesPerAccount,
+      userStats: {
+        registeredToday: usersToday,
+        registeredLastWeek: usersLastWeek,
+        registeredLastFifteenDays: usersLastFifteenDays
+      },
       recentGames: recentGames.map(game => ({
         _id: game._id,
         timestamp: game.timestamp,
