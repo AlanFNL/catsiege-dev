@@ -646,7 +646,7 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
           animate={{ opacity: 1 }}
           className="fixed inset-0 flex items-center justify-center bg-black/80 backdrop-blur-sm z-[200]"
         >
-          <div className="relative max-w-2xl w-[90vw] flex flex-col items-center z-[200] ">
+          <div className="relative max-w-2xl w-[90vw] flex flex-col items-center z-[200] scale-75 md:scale-100">
             {/* Top Banner */}
             <motion.div
               initial={{ opacity: 0, y: -20 }}
@@ -654,7 +654,7 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
               transition={{ delay: 0.3 }}
               className="w-full bg-gradient-to-r from-[#1a1a1a] via-[#2a2a2a] to-[#1a1a1a] rounded-t-xl border-t border-x border-[#FFF5E4]/20 p-8 z-[200]"
             >
-              <h1 className="text-4xl font-bold text-center text-[#FFF5E4] tracking-wider">
+              <h1 className="text-2xl md:text-4xl font-bold text-center text-[#FFF5E4] tracking-wider">
                 CONGRATULATIONS!
               </h1>
             </motion.div>

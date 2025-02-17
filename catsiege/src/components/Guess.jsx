@@ -1,6 +1,6 @@
 import React, { useState, useRef } from "react";
 import orb from "../assets/guess-start4.png";
-import GuessingGame from "./GuessGame";
+import GuessingGame from "../components/GuessGame";
 
 import example from "../assets/example.webp";
 import { motion, AnimatePresence } from "framer-motion";
@@ -87,7 +87,7 @@ function Guess() {
   }, []);
 
   return (
-    <section className="relative w-screen h-screen bg-[url('./assets/guess-game-bgg.webp')] bg-center flex justify-center items-center">
+    <section className="relative w-screen h-fit py-12 md:py-48 bg-[url('./assets/guess-game-bgg.webp')] bg-center flex justify-center items-center">
       <AnimatePresence mode="wait">
         {activeTab === "" && (
           <motion.div
@@ -179,7 +179,10 @@ function Guess() {
                           Uncover the hidden number in the selected range before
                           your opponent.
                         </p>
-                        <img src={example} className="rounded" />
+                        <img
+                          src={example}
+                          className="rounded md:block hidden"
+                        />
                       </div>
                     </motion.div>
                   )}
