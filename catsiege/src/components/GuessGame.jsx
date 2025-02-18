@@ -73,7 +73,7 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
   const [isGuessButtonDisabled, setIsGuessButtonDisabled] = useState(false);
   const [isInfoOpen, setIsInfoOpen] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
-
+  const [loading, setLoading] = useState(false);
   // Reset game state when component mounts or when starting a new game
   const resetGame = () => {
     setSecretNumber(Math.floor(Math.random() * 256) + 1);
@@ -172,30 +172,21 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
   const calculateWinnings = () => {
     if (!currentMultiplier) return -ENTRY_PRICE;
 
-    // Calculate total winnings (entry price * multiplier)
-    const totalWinnings = ENTRY_PRICE * currentMultiplier;
-
-    // If multiplier is less than 1, we lose money
-    if (currentMultiplier < 1) {
-      // Calculate loss (difference between entry price and what we got back)
-      return Number(-(ENTRY_PRICE - totalWinnings).toFixed(2));
+    if (currentMultiplier) {
+      return Number((ENTRY_PRICE * currentMultiplier).toFixed(2));
     }
-
-    // For multipliers greater than 1, calculate profit
-    const profit = totalWinnings - ENTRY_PRICE;
-    return Number(profit.toFixed(2));
   };
 
-  const handleGameEnd = async (hasWon) => {
+  const handleGameEnd = async (hasWon, multiplierUsed = currentMultiplier) => {
     if (hasWon && user) {
       try {
         const previousBalance = user.points;
-        const netWinnings = calculateWinnings(); // Now returns net winnings already
+        const netWinnings = Number((ENTRY_PRICE * multiplierUsed).toFixed(2));
 
         // First record game statistics
         await gameService.recordGameStats({
           turnsToWin: playerTurns,
-          endingMultiplier: currentMultiplier,
+          endingMultiplier: multiplierUsed,
         });
 
         // Then update points with net winnings
@@ -222,7 +213,7 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
         });
       }
     } else {
-      // Handle loss case
+      // Handle complete loss case (didn't find the number)
       setFinalPoints({
         previousBalance: user?.points || 0,
         earned: -ENTRY_PRICE,
@@ -246,6 +237,7 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
   };
 
   const handleGuess = (guess, isCpu = false) => {
+    setLoading(true);
     const numericGuess = parseInt(guess, 10);
 
     if (isCpu) {
@@ -253,28 +245,25 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
     }
 
     if (!isCpu) {
-      setPlayerTurns((prev) => {
-        const newPlayerTurns = prev + 1;
-        const turnMultiplier =
-          TURN_MULTIPLIERS[newPlayerTurns] || TURN_MULTIPLIERS[0];
-        setCurrentMultiplier(turnMultiplier);
-        return newPlayerTurns;
-      });
+      const newPlayerTurn = playerTurns + 1;
+      const computedMultiplier =
+        TURN_MULTIPLIERS[newPlayerTurn] || TURN_MULTIPLIERS[0];
+
+      if (newPlayerTurn > MAX_TURNS) {
+        handleGameEnd(false);
+        return;
+      }
+
+      setPlayerTurns(newPlayerTurn);
+      setCurrentMultiplier(computedMultiplier);
+
+      if (numericGuess === secretNumber) {
+        handleGameEnd(true, computedMultiplier);
+        return;
+      }
     }
 
     setTurns((prev) => prev + 1);
-
-    if (!isCpu && playerTurns + 1 > MAX_TURNS) {
-      handleGameEnd(false);
-      return;
-    }
-
-    if (numericGuess === secretNumber) {
-      const finalMultiplier = TURN_MULTIPLIERS[playerTurns];
-      setCurrentMultiplier(finalMultiplier);
-      handleGameEnd(true);
-      return;
-    }
 
     if (numericGuess < secretNumber) {
       const newMin = numericGuess;
@@ -289,12 +278,10 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
         setIsCpuTurn(true);
         setTimerActive(false);
 
-        // Calculate CPU guess once and store it
         const cpuGuess = Math.floor((newMin + maxRange) / 2);
 
         setTimeout(() => {
           setCpuState({ guess: cpuGuess, feedback: "HIGHER!" });
-
           setTimeout(() => {
             handleGuess(cpuGuess, true);
             setIsCpuTurn(false);
@@ -316,12 +303,10 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
         setIsCpuTurn(true);
         setTimerActive(false);
 
-        // Calculate CPU guess once and store it
         const cpuGuess = Math.floor((minRange + newMax) / 2);
 
         setTimeout(() => {
           setCpuState({ guess: cpuGuess, feedback: "LOWER!" });
-
           setTimeout(() => {
             handleGuess(cpuGuess, true);
             setIsCpuTurn(false);
@@ -331,6 +316,7 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
         }, 2000);
       }
     }
+    setLoading(false);
   };
 
   const handleGuessSubmit = () => {
@@ -479,15 +465,23 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                disabled={!userGuess}
+                disabled={!userGuess || loading}
                 onClick={handleGuessWithCooldown}
-                className="w-full max-w-md mx-auto h-16 bg-gradient-to-r from-[#FFF5E4]/10 via-[#FFF5E4]/20 to-[#FFF5E4]/10 
+                className={`${
+                  loading ? "opacity-50 cursor-not-allowed" : ""
+                } w-full max-w-md mx-auto h-16 bg-gradient-to-r from-[#FFF5E4]/10 via-[#FFF5E4]/20 to-[#FFF5E4]/10 
                           hover:from-[#FFF5E4]/20 hover:via-[#FFF5E4]/30 hover:to-[#FFF5E4]/20
                           border border-[#FFF5E4]/30 rounded-lg text-[#FFF5E4] font-bold text-xl
                           disabled:opacity-50 disabled:cursor-not-allowed
-                          transition-all duration-300 flex items-center justify-center"
+                          transition-all duration-300 flex items-center justify-center`}
               >
-                CHOOSE NUMBER
+                {loading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-[#FFF5E4]/20 border-t-[#FFF5E4] rounded-full animate-spin" />
+                  </div>
+                ) : (
+                  "CHOOSE NUMBER"
+                )}
               </motion.button>
             </div>
           </div>
@@ -707,7 +701,14 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-[#FFF5E4]/70">Points Earned:</span>
-                    <span className="text-green-400 font-bold">
+                    <span
+                      className={`font-bold ${
+                        finalPoints.earned > 0
+                          ? "text-green-400"
+                          : "text-red-400"
+                      }`}
+                    >
+                      {finalPoints.earned > 0 ? "+" : ""}
                       {finalPoints.earned.toFixed(2)} points
                     </span>
                   </div>
