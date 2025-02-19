@@ -56,6 +56,7 @@ function Guess() {
   const handleStartGameConfirm = async () => {
     try {
       setIsStartLoading(true);
+
       // Deduct 5 points via API
       const response = await authService.updatePoints(-5);
 
@@ -68,6 +69,7 @@ function Guess() {
       // Start the game
       setShowConfirmation(false);
       setActiveTab("game");
+
       audioRef.current.play().catch((error) => {
         console.log("Audio playback failed:", error);
       });
@@ -87,7 +89,7 @@ function Guess() {
   }, []);
 
   return (
-    <section className="relative w-screen h-fit py-12 md:py-48 bg-[url('./assets/guess-game-bgg.webp')] bg-center flex justify-center items-center">
+    <section className="relative w-screen  h-fit py-12 md:py-48 bg-[url('./assets/guess-game-bgg.webp')] bg-no-repeat bg-center bg-cover flex justify-center items-center">
       <AnimatePresence mode="wait">
         {activeTab === "" && (
           <motion.div
@@ -96,7 +98,7 @@ function Guess() {
             initial="hidden"
             animate="visible"
             exit="exit"
-            className="relative w-[90vw] sm:w-[600px] flex flex-col items-center h-[80vh] bg-black/50 border4 backdrop-blur-sm rounded-xl shadow-f  p-8"
+            className={`relative w-[90vw] sm:w-[600px] flex flex-col items-center h-[80vh] bg-black/50 border4 backdrop-blur-sm rounded-xl shadow-f  p-8`}
           >
             <h1 className=" text-4xl text-center font-bold z-10 text-[#D5BA8F]">
               The haunted number
@@ -171,7 +173,7 @@ function Guess() {
                     >
                       <div className="space-y-4">
                         <p className="italic text-lg text-center">
-                          The darkness whispers you challenge, a secret number
+                          The darkness whispers you a challenge, a secret number
                           hides in the shadows.
                         </p>
 
@@ -250,7 +252,6 @@ function Guess() {
           </motion.div>
         )}
       </AnimatePresence>
-
       {activeTab == "game" && (
         <GuessingGame onBackToMenu={handleBackToMenu} audioRef={audioRef} />
       )}

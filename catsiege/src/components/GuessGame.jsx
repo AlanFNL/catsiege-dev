@@ -68,6 +68,7 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
     previousBalance: 0,
     earned: 0,
     newBalance: 0,
+    multiplierUsed: 0,
   });
   const [playerTurns, setPlayerTurns] = useState(0);
   const [isGuessButtonDisabled, setIsGuessButtonDisabled] = useState(false);
@@ -96,6 +97,7 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
       previousBalance: 0,
       earned: 0,
       newBalance: 0,
+      multiplierUsed: 0,
     });
   };
 
@@ -177,50 +179,60 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
     }
   };
 
-  const handleGameEnd = async (hasWon, multiplierUsed = currentMultiplier) => {
+  const handleGameEnd = async (hasWon, multiplierUsedFromParam = undefined) => {
+    const usedMultiplier =
+      multiplierUsedFromParam !== undefined
+        ? multiplierUsedFromParam
+        : currentMultiplier;
+
+    setLoading(true);
+
     if (hasWon && user) {
       try {
         const previousBalance = user.points;
-        const netWinnings = Number((ENTRY_PRICE * multiplierUsed).toFixed(2));
+        const netWinnings = Number((ENTRY_PRICE * usedMultiplier).toFixed(2));
 
-        // First record game statistics
+        // Record game statistics using the used multiplier.
         await gameService.recordGameStats({
           turnsToWin: playerTurns,
-          endingMultiplier: multiplierUsed,
+          endingMultiplier: usedMultiplier,
         });
 
-        // Then update points with net winnings
+        // Update points with net winnings.
         const response = await authService.updatePoints(netWinnings);
 
-        // Update final points state
+        // Set final points including the used multiplier.
         setFinalPoints({
           previousBalance,
           earned: netWinnings,
           newBalance: response.points,
+          multiplierUsed: usedMultiplier,
         });
 
-        // Update user context
+        // Update user context.
         setUser((prev) => ({
           ...prev,
           points: response.points,
         }));
       } catch (error) {
         console.error("Failed to update points or record stats:", error);
-        setFinalPoints({
+        setFinalPoints((prev) => ({
+          ...prev,
           previousBalance: user.points,
           earned: 0,
           newBalance: user.points,
-        });
+          multiplierUsed: usedMultiplier,
+        }));
       }
     } else {
-      // Handle complete loss case (didn't find the number)
-      setFinalPoints({
+      // Handle loss scenario.
+      setFinalPoints((prev) => ({
         previousBalance: user?.points || 0,
         earned: -ENTRY_PRICE,
         newBalance: (user?.points || 0) - ENTRY_PRICE,
-      });
+        multiplierUsed: usedMultiplier,
+      }));
 
-      // Update points to subtract entry fee for loss
       try {
         const response = await authService.updatePoints(-ENTRY_PRICE);
         setUser((prev) => ({
@@ -234,42 +246,55 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
 
     setGameOver(true);
     setStage("result");
+    setLoading(false);
   };
 
   const handleGuess = (guess, isCpu = false) => {
     setLoading(true);
     const numericGuess = parseInt(guess, 10);
 
-    if (isCpu) {
-      setTimeLeft(TURN_TIME_LIMIT);
+    // Guard: if game is already over, do nothing.
+    if (gameOver) {
+      setLoading(false);
+      return;
     }
 
     if (!isCpu) {
-      const newPlayerTurn = playerTurns + 1;
-      const computedMultiplier =
-        TURN_MULTIPLIERS[newPlayerTurn] || TURN_MULTIPLIERS[0];
-
-      if (newPlayerTurn > MAX_TURNS) {
-        handleGameEnd(false);
+      // If the human guess is correct, use the current multiplier without updating it.
+      if (numericGuess === secretNumber) {
+        handleGameEnd(true, currentMultiplier);
+        setLoading(false);
         return;
       }
 
+      // Increment player's turn and update multiplier only if guess is incorrect.
+      const newPlayerTurn = playerTurns + 1;
+      if (newPlayerTurn > MAX_TURNS) {
+        handleGameEnd(false);
+        setLoading(false);
+        return;
+      }
+      const computedMultiplier =
+        TURN_MULTIPLIERS[newPlayerTurn] || TURN_MULTIPLIERS[0];
       setPlayerTurns(newPlayerTurn);
       setCurrentMultiplier(computedMultiplier);
-
+    } else if (isCpu) {
+      // For CPU guess: if correct, end game immediately.
       if (numericGuess === secretNumber) {
-        handleGameEnd(true, computedMultiplier);
+        handleGameEnd(true, currentMultiplier);
+        setLoading(false);
         return;
       }
     }
 
+    // Update overall turn count.
     setTurns((prev) => prev + 1);
 
     if (numericGuess < secretNumber) {
       const newMin = numericGuess;
       setMinRange(newMin);
-      setGuessedRanges([
-        ...guessedRanges,
+      setGuessedRanges((prevRanges) => [
+        ...prevRanges,
         { min: minRange, max: numericGuess },
       ]);
       setUserGuess(numericGuess.toString());
@@ -286,6 +311,8 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
             handleGuess(cpuGuess, true);
             setIsCpuTurn(false);
             setCpuState({ guess: null, feedback: null });
+            // Reset timer to 15 seconds when finishing CPU turn.
+            setTimeLeft(TURN_TIME_LIMIT);
             setTimerActive(true);
           }, 1500);
         }, 2000);
@@ -293,8 +320,8 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
     } else if (numericGuess > secretNumber) {
       const newMax = numericGuess;
       setMaxRange(newMax);
-      setGuessedRanges([
-        ...guessedRanges,
+      setGuessedRanges((prevRanges) => [
+        ...prevRanges,
         { min: numericGuess, max: maxRange },
       ]);
       setUserGuess(numericGuess.toString());
@@ -311,6 +338,8 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
             handleGuess(cpuGuess, true);
             setIsCpuTurn(false);
             setCpuState({ guess: null, feedback: null });
+            // Reset timer to 15 seconds when finishing CPU turn.
+            setTimeLeft(TURN_TIME_LIMIT);
             setTimerActive(true);
           }, 1500);
         }, 2000);
@@ -353,7 +382,7 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
     // Enable button after 1 second
     setTimeout(() => {
       setIsGuessButtonDisabled(false);
-    }, 1000);
+    }, 2000);
   };
 
   const handleMuteToggle = () => {
@@ -468,14 +497,14 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
                 disabled={!userGuess || loading}
                 onClick={handleGuessWithCooldown}
                 className={`${
-                  loading ? "opacity-50 cursor-not-allowed" : ""
+                  isGuessButtonDisabled ? "opacity-50 cursor-not-allowed" : ""
                 } w-full max-w-md mx-auto h-16 bg-gradient-to-r from-[#FFF5E4]/10 via-[#FFF5E4]/20 to-[#FFF5E4]/10 
                           hover:from-[#FFF5E4]/20 hover:via-[#FFF5E4]/30 hover:to-[#FFF5E4]/20
                           border border-[#FFF5E4]/30 rounded-lg text-[#FFF5E4] font-bold text-xl
                           disabled:opacity-50 disabled:cursor-not-allowed
                           transition-all duration-300 flex items-center justify-center`}
               >
-                {loading ? (
+                {isGuessButtonDisabled ? (
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 border-2 border-[#FFF5E4]/20 border-t-[#FFF5E4] rounded-full animate-spin" />
                   </div>
@@ -628,6 +657,50 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
                     ? "You ran out of multiplier power!"
                     : `The number was: ${secretNumber}`}
                 </p>
+
+                {/* Balance Section */}
+                <div className="border-t border-b border-[#FFF5E4]/20 py-6 space-y-6">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[#FFF5E4]/70">Previous Balance:</span>
+                    <span className="text-[#FFF5E4] font-bold">
+                      {finalPoints.previousBalance?.toFixed(2)} points
+                    </span>
+                  </div>
+
+                  <div className="bg-[#FFF5E4]/5 rounded-lg p-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-[#FFF5E4]/70">
+                        Multiplier Earned:
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <img src={orb} alt="" className="w-6 h-6" />
+                        <span className="text-[#FBE294] font-bold">
+                          x{finalPoints.multiplierUsed?.toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[#FFF5E4]/70">Points Earned:</span>
+                      <span
+                        className={`font-bold ${
+                          finalPoints.earned > 0
+                            ? "text-green-400"
+                            : "text-red-400"
+                        }`}
+                      >
+                        {finalPoints.earned > 0 ? "+" : ""}
+                        {finalPoints.earned.toFixed(2)} points
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-center pt-2 border-t border-[#FFF5E4]/10">
+                    <span className="text-[#FFF5E4]/70">New Balance:</span>
+                    <span className="text-[#FFF5E4] font-bold text-lg">
+                      {finalPoints.newBalance?.toFixed(2)} points
+                    </span>
+                  </div>
+                </div>
               </div>
             </motion.div>
           )}
@@ -695,7 +768,7 @@ const GuessingGame = ({ onBackToMenu, audioRef }) => {
                     <div className="flex items-center gap-2">
                       <img src={orb} alt="" className="w-6 h-6" />
                       <span className="text-[#FBE294] font-bold">
-                        x{currentMultiplier?.toFixed(2)}
+                        x{finalPoints.multiplierUsed?.toFixed(2)}
                       </span>
                     </div>
                   </div>
