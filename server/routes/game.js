@@ -104,22 +104,13 @@ router.post('/guess', isAuthenticated, async (req, res) => {
     // Process guess
     if (guess === session.secretNumber) {
       session.lastGuessResult = 'win';
-      // Handle win
-      const winnings = ENTRY_PRICE * session.currentMultiplier;
-      
-      // Update user points
-      const user = await User.findById(req.userId);
-      user.points += winnings;
-      await user.save();
-
       // End session
       session.isActive = false;
       await session.save();
 
       return res.json({
         result: 'win',
-        winnings,
-        newBalance: user.points,
+        winnings: ENTRY_PRICE * session.currentMultiplier,
         lastGuess: guess,
         lastGuessResult: 'win'
       });
