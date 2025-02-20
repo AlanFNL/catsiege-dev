@@ -251,10 +251,11 @@ function Guess() {
             </div>
           </motion.div>
         )}
+
+        {activeTab == "game" && (
+          <GuessingGame onBackToMenu={handleBackToMenu} audioRef={audioRef} />
+        )}
       </AnimatePresence>
-      {activeTab == "game" && (
-        <GuessingGame onBackToMenu={handleBackToMenu} audioRef={audioRef} />
-      )}
 
       {/* Enhanced Confirmation Modal */}
       {showConfirmation && (
