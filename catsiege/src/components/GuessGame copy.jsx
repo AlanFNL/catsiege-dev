@@ -125,6 +125,14 @@ const GuessingGame = ({
   };
 
   const handleGameEnd = async (hasWon, multiplierUsedFromParam = undefined) => {
+    console.log("=== handleGameEnd called ===");
+    console.log("hasWon:", hasWon);
+    console.log("multiplierUsedFromParam:", multiplierUsedFromParam);
+    console.log("currentMultiplier:", currentMultiplier);
+    console.log("hasUpdatedPoints:", hasUpdatedPoints);
+    console.log("gameOver:", gameOver);
+    console.log("isCpuTurn:", isCpuTurn);
+
     const usedMultiplier =
       multiplierUsedFromParam !== undefined
         ? multiplierUsedFromParam
@@ -134,10 +142,17 @@ const GuessingGame = ({
 
     try {
       if (!hasUpdatedPoints) {
+        console.log("Attempting to update points...");
         const previousBalance = user?.points || 0;
         const pointsChange = hasWon
           ? Number((entryPrice * usedMultiplier).toFixed(2))
           : -entryPrice;
+
+        console.log("Points calculation:", {
+          previousBalance,
+          pointsChange,
+          usedMultiplier,
+        });
 
         if (hasWon) {
           await gameService.recordGameStats({
@@ -149,6 +164,7 @@ const GuessingGame = ({
         }
 
         const response = await authService.updatePoints(pointsChange);
+        console.log("Points updated:", response);
         setHasUpdatedPoints(true);
 
         setFinalPoints({
@@ -162,8 +178,11 @@ const GuessingGame = ({
           ...prev,
           points: response.points,
         }));
+      } else {
+        console.log("Points already updated, skipping update");
       }
     } catch (error) {
+      console.error("Failed to update points or record stats:", error);
       setFinalPoints((prev) => ({
         ...prev,
         previousBalance: user?.points || 0,
@@ -179,26 +198,46 @@ const GuessingGame = ({
   };
 
   const handleGuess = (guess, isCpu = false) => {
+    console.log("=== handleGuess called ===");
+    console.log("guess:", guess);
+    console.log("isCpu:", isCpu);
+    console.log("gameOver:", gameOver);
+    console.log("currentMultiplier:", currentMultiplier);
+    console.log("playerTurns:", playerTurns);
+    console.log("secretNumber:", secretNumber);
+
     setLoading(true);
     const numericGuess = parseInt(guess, 10);
 
+    // Early return if game is already over
     if (gameOver) {
+      console.log("Game is already over, returning early");
       setLoading(false);
       return;
     }
 
+    // Check if guess is correct first
     if (numericGuess === secretNumber) {
-      setGameOver(true);
+      console.log("Correct guess! Ending game with win");
+      setGameOver(true); // Set game over immediately
       handleGameEnd(true, currentMultiplier);
       setLoading(false);
       return;
     }
 
+    // Only update turns and multiplier if game is still going
     if (!isCpu) {
       const newPlayerTurn = playerTurns + 1;
+      console.log("Player turn update:", {
+        currentTurn: playerTurns,
+        newTurn: newPlayerTurn,
+        maxTurns: MAX_TURNS,
+      });
 
+      // Check for max turns before processing the guess
       if (newPlayerTurn > MAX_TURNS) {
-        setGameOver(true);
+        console.log("Max turns reached, ending game");
+        setGameOver(true); // Set game over immediately
         handleGameEnd(false);
         setLoading(false);
         return;
@@ -206,16 +245,21 @@ const GuessingGame = ({
       const computedMultiplier =
         TURN_MULTIPLIERS[difficultyLevel][newPlayerTurn] ||
         TURN_MULTIPLIERS[difficultyLevel][0];
+      console.log("New multiplier computed:", computedMultiplier);
 
       setPlayerTurns(newPlayerTurn);
       setCurrentMultiplier(computedMultiplier);
     }
 
+    // Process the guess
     setTurns((prev) => prev + 1);
 
+    // If guess is incorrect, update ranges and continue game
     if (numericGuess < secretNumber) {
+      console.log("Guess too low, updating range");
       handleLowerGuess(numericGuess, isCpu);
     } else {
+      console.log("Guess too high, updating range");
       handleHigherGuess(numericGuess, isCpu);
     }
 
@@ -251,7 +295,15 @@ const GuessingGame = ({
   };
 
   const handleCPUTurn = (min, max) => {
+    console.log("=== handleCPUTurn called ===");
+    console.log("min:", min);
+    console.log("max:", max);
+    console.log("gameOver:", gameOver);
+    console.log("isCpuTurn:", isCpuTurn);
+
+    // Don't process CPU turn if game is over
     if (gameOver) {
+      console.log("Game is over, skipping CPU turn");
       return;
     }
 
@@ -259,6 +311,7 @@ const GuessingGame = ({
     setTimerActive(false);
 
     const cpuGuess = Math.floor((min + max) / 2);
+    console.log("CPU calculated guess:", cpuGuess);
 
     setTimeout(() => {
       setCpuState({
@@ -271,6 +324,7 @@ const GuessingGame = ({
             : "LOWER!",
       });
       setTimeout(() => {
+        console.log("CPU making guess:", cpuGuess);
         if (cpuGuess === secretNumber) {
           setIsGameEnding(true);
           setTimeout(() => {
@@ -280,11 +334,15 @@ const GuessingGame = ({
           }, 2000);
         } else {
           handleGuess(cpuGuess, true);
+          // Only switch turns if game isn't over
           if (!gameOver) {
+            console.log("Game not over, switching back to player");
             setIsCpuTurn(false);
             setCpuState({ guess: null, feedback: null });
             setTimeLeft(TURN_TIME_LIMIT);
             setTimerActive(true);
+          } else {
+            console.log("Game is over, not switching turns");
           }
         }
       }, 1500);
@@ -448,7 +506,6 @@ const GuessingGame = ({
           secretNumber={secretNumber}
           finalPoints={finalPoints}
           onBack={handleBack}
-          entryPrice={entryPrice}
         />
       )}
 

@@ -16,14 +16,18 @@ const SkeletonPulse = () => (
   />
 );
 
-export const ResultsScreen = ({ secretNumber, finalPoints, onBack }) => {
+export const ResultsScreen = ({
+  secretNumber,
+  finalPoints,
+  onBack,
+  entryPrice,
+}) => {
   const isLoading =
     !finalPoints ||
     !secretNumber ||
     secretNumber === 0 ||
     (finalPoints &&
-      (finalPoints.previousBalance === 0 ||
-        finalPoints.multiplierUsed === 0 ||
+      (finalPoints.multiplierUsed === 0 ||
         finalPoints.earned === 0 ||
         finalPoints.newBalance === 0));
 
@@ -89,6 +93,12 @@ export const ResultsScreen = ({ secretNumber, finalPoints, onBack }) => {
 
             <div className="bg-[#FFF5E4]/5 rounded-lg p-4">
               <div className="flex justify-between items-center mb-2 h-6">
+                <span className="text-[#FFF5E4]/70">Entry Price:</span>
+                <span className="text-[#FFF5E4] font-bold">
+                  {entryPrice} points
+                </span>
+              </div>
+              <div className="flex justify-between items-center mb-2 h-6">
                 <span className="text-[#FFF5E4]/70">Multiplier Earned:</span>
                 {isLoading ? (
                   <div className="w-24 h-full">
@@ -103,6 +113,7 @@ export const ResultsScreen = ({ secretNumber, finalPoints, onBack }) => {
                   </div>
                 )}
               </div>
+
               <div className="flex justify-between items-center h-6">
                 <span className="text-[#FFF5E4]/70">Points Earned:</span>
                 {isLoading ? (
@@ -116,7 +127,7 @@ export const ResultsScreen = ({ secretNumber, finalPoints, onBack }) => {
                     }`}
                   >
                     {finalPoints.earned > 0 ? "+" : ""}
-                    {finalPoints.earned.toFixed(2)} points
+                    {finalPoints.earned?.toFixed(2)} points
                   </span>
                 )}
               </div>

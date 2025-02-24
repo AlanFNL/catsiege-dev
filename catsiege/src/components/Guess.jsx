@@ -28,6 +28,8 @@ function Guess() {
   const { user, setUser } = useAuth();
   const [activeRuleTab, setActiveRuleTab] = useState("objective");
   const [isStartLoading, setIsStartLoading] = useState(false);
+  const [selectedDifficulty, setSelectedDifficulty] = useState(256);
+  const [selectedEntryPrice, setSelectedEntryPrice] = useState(5);
 
   audioRef.current.volume = 0.2;
   audioRef.current.loop = true;
@@ -57,8 +59,8 @@ function Guess() {
     try {
       setIsStartLoading(true);
 
-      // Deduct 5 points via API
-      const response = await authService.updatePoints(-5);
+      // Deduct selected entry price via API
+      const response = await authService.updatePoints(-selectedEntryPrice);
 
       // Update user points in context
       setUser((prev) => ({
@@ -78,6 +80,11 @@ function Guess() {
     } finally {
       setIsStartLoading(false);
     }
+  };
+
+  const handleShowConfirmation = () => {
+    setSelectedEntryPrice(5);
+    setShowConfirmation(true);
   };
 
   React.useEffect(() => {
@@ -110,7 +117,7 @@ function Guess() {
 
             <div className="w-[500px] h-[80vh] md:h-[600px] flex flex-col gap-7 justify-center text-center items-center px-6">
               <motion.button
-                onClick={() => setShowConfirmation(true)}
+                onClick={handleShowConfirmation}
                 className="z-10 text-center font-bold text-3xl h-16 w-[350px] rounded-lg frame4 backdrop-blur-sm text-[#FFF5E4]  transition-all"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -253,7 +260,12 @@ function Guess() {
         )}
 
         {activeTab == "game" && (
-          <GuessingGame onBackToMenu={handleBackToMenu} audioRef={audioRef} />
+          <GuessingGame
+            onBackToMenu={handleBackToMenu}
+            audioRef={audioRef}
+            difficulty={selectedDifficulty}
+            entryPrice={selectedEntryPrice}
+          />
         )}
       </AnimatePresence>
 
@@ -312,39 +324,127 @@ function Guess() {
                 </div>
               </>
             ) : (
-              // Original confirmation content for users with points
               <>
-                <h2 className="text-2xl text-center font-bold text-[#FFF5E4] mb-4">
-                  Start Game?
+                <h2 className="text-2xl text-center font-bold text-[#FFF5E4] mb-8">
+                  Game Options
                 </h2>
-                <div className="bg-[#FFF5E4]/5 rounded-lg p-4 mb-6">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-[#FFF5E4]/70">Current Balance:</span>
+
+                {/* Difficulty Selection */}
+                <div className="mb-8">
+                  <h3 className="text-[#FFF5E4] font-bold mb-4">
+                    Select Difficulty
+                  </h3>
+                  <div className="grid grid-cols-3 gap-3">
+                    {[
+                      { value: 128, label: "Easy" },
+                      { value: 256, label: "Medium" },
+                      { value: 512, label: "Hard" },
+                    ].map(({ value, label }) => (
+                      <button
+                        key={value}
+                        onClick={() => setSelectedDifficulty(value)}
+                        className={`relative py-4 px-3 rounded-lg font-bold transition-all overflow-hidden
+                          ${
+                            selectedDifficulty === value
+                              ? "bg-gradient-to-br from-[#FFF5E4]/30 to-[#FFF5E4]/10 border border-[#FFF5E4]/40"
+                              : "bg-black/40 hover:bg-black/60 border border-[#FFF5E4]/10"
+                          }`}
+                      >
+                        <div className="relative z-10">
+                          <span className="block text-lg text-[#FFF5E4] mb-1">
+                            {label}
+                          </span>
+                          <span
+                            className={`block text-md ${
+                              selectedDifficulty === value
+                                ? "text-[#FBE294]"
+                                : "text-[#FFF5E4]/60"
+                            }`}
+                          >
+                            1-{value}
+                          </span>
+                        </div>
+                        {selectedDifficulty === value && (
+                          <div className="absolute inset-0 bg-[#FFF5E4]/5 animate-pulse" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Entry Price Selection */}
+                <div className="mb-8">
+                  <h3 className="text-[#FFF5E4] font-bold mb-4">
+                    Select Entry Price
+                  </h3>
+                  <div className="grid grid-cols-3 gap-3">
+                    {[
+                      { value: 5, label: "Low" },
+                      { value: 50, label: "Medium" },
+                      { value: user?.points || 0, label: "All In" },
+                    ].map(({ value, label }) => (
+                      <button
+                        key={value}
+                        onClick={() => setSelectedEntryPrice(value)}
+                        className={`relative py-4 px-3 rounded-lg font-bold transition-all overflow-hidden
+                          ${
+                            selectedEntryPrice === value
+                              ? "bg-gradient-to-br from-[#FFF5E4]/30 to-[#FFF5E4]/10 border border-[#FFF5E4]/40"
+                              : "bg-black/40 hover:bg-black/60 border border-[#FFF5E4]/10"
+                          }`}
+                      >
+                        <div className="relative z-10">
+                          <span className="block text-lg text-[#FFF5E4] mb-1">
+                            {label}
+                          </span>
+                          <span
+                            className={`block text-md ${
+                              selectedEntryPrice === value
+                                ? "text-[#FBE294]"
+                                : "text-[#FFF5E4]/60"
+                            }`}
+                          >
+                            {value} points
+                          </span>
+                        </div>
+                        {selectedEntryPrice === value && (
+                          <div className="absolute inset-0 bg-[#FFF5E4]/5 animate-pulse" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Points Summary */}
+                <div className="bg-gradient-to-br from-black/60 to-black/40 rounded-lg p-6 mb-8 border border-[#FFF5E4]/10">
+                  <div className="flex justify-between items-center mb-3">
+                    <span className="text-[#FFF5E4]/80">Current Balance:</span>
                     <span className="text-[#FFF5E4] font-bold text-lg">
                       {user.points} points
                     </span>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-[#FFF5E4]/70">Game Cost:</span>
+                  <div className="flex justify-between items-center mb-3">
+                    <span className="text-[#FFF5E4]/80">Game Cost:</span>
                     <span className="text-red-400 font-bold text-lg">
-                      -5 points
+                      -{selectedEntryPrice} points
                     </span>
                   </div>
-                  <div className="mt-3 pt-3 border-t border-[#FFF5E4]/10">
+                  <div className="pt-3 border-t border-[#FFF5E4]/10">
                     <div className="flex justify-between items-center">
-                      <span className="text-[#FFF5E4]/70">Balance After:</span>
+                      <span className="text-[#FFF5E4]/80">Balance After:</span>
                       <span className="text-[#FFF5E4] font-bold text-lg">
-                        {user.points - 5} points
+                        {user.points - selectedEntryPrice} points
                       </span>
                     </div>
                   </div>
                 </div>
-                <div className="flex gap-4 justify-evenly">
+
+                <div className="flex gap-4 justify-center">
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => setShowConfirmation(false)}
-                    className="px-4 py-2 font-bold text-[#FFF5E4]/60 hover:text-[#FFF5E4]"
+                    className="px-6 py-3 font-bold text-[#FFF5E4]/60 hover:text-[#FFF5E4] transition-colors"
                   >
                     Cancel
                   </motion.button>
@@ -352,8 +452,11 @@ function Guess() {
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={handleStartGameConfirm}
-                    disabled={user.points < 5 || isStartLoading}
-                    className="px-6 py-2 font-bold bg-[#FFF5E4]/10 hover:bg-[#FFF5E4]/20 text-[#FFF5E4] rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={
+                      user.points < selectedEntryPrice || isStartLoading
+                    }
+                    className="px-8 py-3 font-bold bg-gradient-to-r from-[#FFF5E4]/20 to-[#FFF5E4]/10 hover:from-[#FFF5E4]/30 hover:to-[#FFF5E4]/20 
+                    text-[#FFF5E4] rounded-lg border border-[#FFF5E4]/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                   >
                     {isStartLoading ? (
                       <div className="flex items-center gap-2">
