@@ -372,7 +372,7 @@ function Guess() {
                   </div>
                 </div>
 
-                {/* Entry Price Selection */}
+                {/* Entry Price Selection
                 <div className="mb-8">
                   <h3 className="text-[#FFF5E4] font-bold mb-4">
                     Select Entry Price
@@ -410,6 +410,7 @@ function Guess() {
                     ))}
                   </div>
                 </div>
+                */}
 
                 {/* Points Summary */}
                 <div className="bg-gradient-to-br from-black/60 to-black/40 rounded-lg p-6 mb-8 border border-[#FFF5E4]/10">
