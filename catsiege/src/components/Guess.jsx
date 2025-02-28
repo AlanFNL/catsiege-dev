@@ -378,11 +378,7 @@ function Guess() {
                     Select Entry Price
                   </h3>
                   <div className="grid grid-cols-3 gap-3">
-                    {[
-                      { value: 5, label: "Low" },
-                      { value: 50, label: "Medium" },
-                      { value: user?.points || 0, label: "All In" },
-                    ].map(({ value, label }) => (
+                    {[{ value: 5, label: "Low" }].map(({ value, label }) => (
                       <button
                         key={value}
                         onClick={() => setSelectedEntryPrice(value)}
