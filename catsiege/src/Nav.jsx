@@ -258,14 +258,19 @@ export default function Nav() {
                 <RouterLink
                   to="/rewards"
                   className="block py-2 text-sm hover:text-gray-300"
-                  onClick={() => setIsMenuOpen(false)}
+                  onClick={() => {
+                    setIsDropdownOpen(false);
+                    handleRewardsClick();
+                  }}
                 >
                   Points & Rewards ({user.points || 0})
                 </RouterLink>
                 <RouterLink
-                  to="/wallet"
                   className="block py-2 text-sm hover:text-gray-300"
-                  onClick={() => setIsMenuOpen(false)}
+                  onClick={() => {
+                    setIsDropdownOpen(false);
+                    setIsWalletOpen(true);
+                  }}
                 >
                   Connect Wallet
                 </RouterLink>
