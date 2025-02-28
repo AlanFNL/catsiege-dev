@@ -256,7 +256,6 @@ export default function Nav() {
             ) : user ? (
               <>
                 <RouterLink
-                  to="/rewards"
                   className="block py-2 text-sm hover:text-gray-300"
                   onClick={() => {
                     setIsDropdownOpen(false);
