@@ -237,16 +237,29 @@ export default function Nav() {
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
           >
-            {navItems.map((item) => (
-              <RouterLink
-                key={item.name}
-                to={item.target}
-                className="block py-2 text-sm hover:text-gray-300"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                {item.name}
-              </RouterLink>
-            ))}
+            {navItems.map((item) =>
+              item.isScroll ? (
+                <Link
+                  key={item.name}
+                  to={item.target}
+                  smooth={true}
+                  duration={500}
+                  className="block py-2 text-sm hover:text-gray-300 cursor-pointer"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  {item.name}
+                </Link>
+              ) : (
+                <RouterLink
+                  key={item.name}
+                  to={item.target}
+                  className="block py-2 text-sm hover:text-gray-300"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  {item.name}
+                </RouterLink>
+              )
+            )}
 
             {loading ? (
               <div className="py-2">
