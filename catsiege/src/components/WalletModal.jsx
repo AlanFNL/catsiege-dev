@@ -1,10 +1,12 @@
-import React from "react";
+import React, { useState } from "react";
 import ReactDOM from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { X } from "lucide-react";
+import { X, HelpCircle } from "lucide-react";
 import { WalletConnect } from "./WalletConnect";
 
 export default function WalletModal({ isOpen, onClose }) {
+  const [showHelp, setShowHelp] = useState(false);
+
   return ReactDOM.createPortal(
     <AnimatePresence>
       {isOpen && (
@@ -46,14 +48,53 @@ export default function WalletModal({ isOpen, onClose }) {
                     <X size={24} />
                   </button>
 
-                  <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-[#FFF5E4] mb-2">
-                      Connect Wallet
-                    </h1>
-                    <p className="text-[#FFF5E4]/60">
+                  <div className="mb-6">
+                    <div className="flex justify-between items-center">
+                      <h1 className="text-2xl font-bold text-[#FFF5E4]">
+                        Connect Wallet
+                      </h1>
+                      <button
+                        onClick={() => setShowHelp(!showHelp)}
+                        className="text-[#FFF5E4]/60 hover:text-[#FFF5E4] transition-colors mt-12 -mr-2"
+                      >
+                        <HelpCircle size={20} />
+                      </button>
+                    </div>
+                    <p className="text-[#FFF5E4]/60 mt-2">
                       Connect your Solana wallet to verify NFT ownership
                     </p>
                   </div>
+
+                  {showHelp && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="mb-6 bg-[#FFF5E4]/5 p-4 rounded-lg"
+                    >
+                      <h3 className="text-[#FFF5E4] font-bold mb-2">
+                        Wallet Help
+                      </h3>
+                      <ul className="text-sm text-[#FFF5E4]/80 space-y-2 list-disc pl-4">
+                        <li>Phantom is the recommended wallet for CatSiege</li>
+                        <li>
+                          If you don't have Phantom installed, you'll see an
+                          option to install it
+                        </li>
+                        <li>
+                          If you're having connection issues, try refreshing the
+                          page
+                        </li>
+                        <li>
+                          Your wallet must be connected to the Solana network
+                        </li>
+                        <li>
+                          You must approve the connection request in your wallet
+                          app
+                        </li>
+                      </ul>
+                    </motion.div>
+                  )}
 
                   <div className="flex flex-col items-center">
                     <WalletConnect onClose={onClose} />

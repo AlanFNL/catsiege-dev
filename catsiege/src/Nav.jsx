@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Menu,
   X,
@@ -8,10 +8,11 @@ import {
   Gift,
   LogOut,
   BarChart3,
+  BadgeHelp,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-scroll";
-import { Link as RouterLink, useNavigate } from "react-router-dom";
+import { Link as RouterLink, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "./contexts/AuthContext";
 import { authService } from "./services/api";
 import logo from "./assets/logo.png";
@@ -19,6 +20,8 @@ import points from "./assets/points.png";
 import Rewards from "./components/Rewards";
 import { WalletConnect } from "./components/WalletConnect";
 import WalletModal from "./components/WalletModal";
+import discordLogo from "./assets/discord-logo.svg";
+import ReactDOM from "react-dom";
 
 const navItems = [
   { name: "TOURNAMENT", target: "tournament", isScroll: true },
@@ -58,13 +61,107 @@ const AuthSkeleton = () => (
   </div>
 );
 
+// Discord Support Popup Component
+const DiscordSupportPopup = ({ isOpen, onClose }) => {
+  return ReactDOM.createPortal(
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          <motion.div
+            className="fixed inset-0 bg-black/80 z-[999]"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+          />
+
+          <motion.div
+            className="fixed inset-0 z-[1000] overflow-y-auto"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <div className="min-h-screen px-4 text-center">
+              <span
+                className="inline-block h-screen align-middle"
+                aria-hidden="true"
+              >
+                &#8203;
+              </span>
+
+              <motion.div
+                className="inline-block w-full max-w-md my-8 text-left align-middle transition-all transform bg-black shadow-xl rounded-2xl border border-[#FFF5E4]/20"
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <div className="relative p-6">
+                  <button
+                    onClick={onClose}
+                    className="absolute right-4 top-4 text-[#FFF5E4]/60 hover:text-[#FFF5E4]"
+                  >
+                    <X size={24} />
+                  </button>
+
+                  <div className="mb-6">
+                    <h1 className="text-2xl text-center font-bold text-[#FFF5E4]">
+                      Join Our Community
+                    </h1>
+                    <p className="text-[#FFF5E4]/60 text-center mt-2">
+                      Get help, share feedback, and join our growing community
+                    </p>
+                  </div>
+
+                  <div className="flex items-center justify-center mb-6">
+                    <div className="w-24 h-24 bg-[#FFF5E4]/10 rounded-full flex items-center justify-center p-4">
+                      <img
+                        src={discordLogo}
+                        alt="Discord"
+                        className="w-16 h-16"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="bg-[#FFF5E4]/5 rounded-lg p-4 mb-6 text-center">
+                    <p className="text-[#FFF5E4]/80 mb-2">
+                      Join our Discord server for exclusive updates, community
+                      events, and support
+                    </p>
+                    <p className="text-[#FFF5E4]/60 text-sm">
+                      https://discord.gg/jTfQ42YKbq
+                    </p>
+                  </div>
+
+                  <a
+                    href="https://discord.gg/jTfQ42YKbq"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block w-full bg-gradient-to-r from-[#FFF5E4]/20 to-[#FFF5E4]/10 hover:from-[#FFF5E4]/30 hover:to-[#FFF5E4]/20 
+                    text-[#FFF5E4] py-3 px-4 rounded-lg font-medium text-center border border-[#FFF5E4]/20 transition-all"
+                  >
+                    Join Discord Server
+                  </a>
+                </div>
+              </motion.div>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>,
+    document.body
+  );
+};
+
 export default function Nav() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isRewardsOpen, setIsRewardsOpen] = useState(false);
   const [isWalletOpen, setIsWalletOpen] = useState(false);
+  const [isDiscordOpen, setIsDiscordOpen] = useState(false);
   const { user, logout, loading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -181,6 +278,16 @@ export default function Nav() {
                       <Wallet size={16} />
                       <span>Connect Wallet</span>
                     </button>
+                    <button
+                      onClick={() => {
+                        setIsDropdownOpen(false);
+                        setIsDiscordOpen(true);
+                      }}
+                      className="flex items-center space-x-2 w-full px-4 py-2 text-sm hover:bg-[#FFF5E4]/10"
+                    >
+                      <BadgeHelp size={16} />
+                      <span>Support & Community</span>
+                    </button>
                     {user.isAdmin && (
                       <RouterLink
                         to="/admin/dashboard"
@@ -286,6 +393,15 @@ export default function Nav() {
                 >
                   Connect Wallet
                 </RouterLink>
+                <RouterLink
+                  className="block py-2 text-sm hover:text-gray-300"
+                  onClick={() => {
+                    setIsDropdownOpen(false);
+                    setIsDiscordOpen(true);
+                  }}
+                >
+                  Support & Community
+                </RouterLink>
                 <button
                   onClick={handleLogout}
                   className="block py-2 text-sm hover:text-gray-300 text-red-400 text-left w-full"
@@ -309,6 +425,15 @@ export default function Nav() {
                 >
                   SIGN UP
                 </RouterLink>
+                <RouterLink
+                  className="block py-2 text-sm hover:text-gray-300"
+                  onClick={() => {
+                    setIsDropdownOpen(false);
+                    setIsDiscordOpen(true);
+                  }}
+                >
+                  Support & Community
+                </RouterLink>
               </>
             )}
           </motion.div>
@@ -319,6 +444,12 @@ export default function Nav() {
       <WalletModal
         isOpen={isWalletOpen}
         onClose={() => setIsWalletOpen(false)}
+      />
+
+      {/* Add Discord Support Popup */}
+      <DiscordSupportPopup
+        isOpen={isDiscordOpen}
+        onClose={() => setIsDiscordOpen(false)}
       />
     </motion.nav>
   );
