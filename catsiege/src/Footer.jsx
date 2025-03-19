@@ -53,6 +53,14 @@ export default function Footer() {
                 <img src={twitter} />
               </a>
             </div>
+            <div className="mt-3 text-sm text-[#FFF5E4]/70">
+              <a
+                href="mailto:team@catsiege.com"
+                className="hover:text-[#FFF5E4] transition-colors"
+              >
+                team@catsiege.com
+              </a>
+            </div>
           </div>
 
           {/* Right: Privacy Policy */}

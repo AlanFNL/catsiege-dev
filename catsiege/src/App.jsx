@@ -11,6 +11,8 @@ import Guess from "./components/Guess";
 import TournamentWinners from "./components/TournamentWinners";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import {
   BrowserRouter as Router,
   Routes,
@@ -59,13 +61,14 @@ function AppContent() {
               <div className="overflow-x-hidden">
                 <Nav />
                 <Hero />
+                <Guess />
                 <div id="tournament">
                   <TournamentWinners />
                 </div>
                 <div id="roadmap">
                   <Whitelist />
                 </div>
-                <Guess />
+
                 <Fourth />
                 <div id="contact">
                   <Footer />
@@ -75,6 +78,7 @@ function AppContent() {
           />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+
           <Route
             path="/admin/dashboard"
             element={

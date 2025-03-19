@@ -31,6 +31,9 @@ export const ResultsScreen = ({
         finalPoints.earned === 0 ||
         finalPoints.newBalance === 0));
 
+  // Determine if CPU won based on whether points earned is negative
+  const cpuWon = finalPoints && finalPoints.earned < 0;
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -45,7 +48,7 @@ export const ResultsScreen = ({
           className="w-full bg-gradient-to-r from-[#1a1a1a] via-[#2a2a2a] to-[#1a1a1a] rounded-t-xl border-t border-x border-[#FFF5E4]/20 p-8 z-[200]"
         >
           <h1 className="text-2xl md:text-4xl font-bold text-center text-[#FFF5E4] tracking-wider">
-            CONGRATULATIONS!
+            {cpuWon ? "GAME OVER" : "CONGRATULATIONS!"}
           </h1>
         </motion.div>
 
@@ -69,12 +72,25 @@ export const ResultsScreen = ({
           </div>
 
           <div className="space-y-4 text-center">
-            <p className="text-[#FFF5E4]/80 italic text-lg">
-              The shadows recede as you uncover the secret number.
-            </p>
-            <p className="text-[#FFF5E4]/80 italic text-lg">
-              You've outwitted the night.
-            </p>
+            {cpuWon ? (
+              <>
+                <p className="text-[#FFF5E4]/80 italic text-lg">
+                  The shadows have claimed victory this time.
+                </p>
+                <p className="text-[#FFF5E4]/80 italic text-lg">
+                  Your opponent found the secret number first.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-[#FFF5E4]/80 italic text-lg">
+                  The shadows recede as you uncover the secret number.
+                </p>
+                <p className="text-[#FFF5E4]/80 italic text-lg">
+                  You've outwitted the night.
+                </p>
+              </>
+            )}
           </div>
 
           <div className="border-t border-b border-[#FFF5E4]/20 py-6 space-y-6">
@@ -99,7 +115,9 @@ export const ResultsScreen = ({
                 </span>
               </div>
               <div className="flex justify-between items-center mb-2 h-6">
-                <span className="text-[#FFF5E4]/70">Multiplier Earned:</span>
+                <span className="text-[#FFF5E4]/70">
+                  {cpuWon ? "Final Multiplier:" : "Multiplier Earned:"}
+                </span>
                 {isLoading ? (
                   <div className="w-24 h-full">
                     <SkeletonPulse />
@@ -110,6 +128,9 @@ export const ResultsScreen = ({
                     <span className="text-[#FBE294] font-bold">
                       x{finalPoints.multiplierUsed?.toFixed(2)}
                     </span>
+                    {cpuWon && (
+                      <span className="text-red-400 text-xs">(-10%)</span>
+                    )}
                   </div>
                 )}
               </div>
@@ -148,7 +169,9 @@ export const ResultsScreen = ({
           </div>
 
           <p className="text-[#FFF5E4]/80 italic text-center text-lg">
-            The shadows may fade, but your victory echoes through the dark.
+            {cpuWon
+              ? "The darkness fades, but will you return to challenge it once more?"
+              : "The shadows may fade, but your victory echoes through the dark."}
           </p>
         </motion.div>
 

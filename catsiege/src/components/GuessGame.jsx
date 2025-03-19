@@ -135,14 +135,34 @@ const GuessingGame = ({
     try {
       if (!hasUpdatedPoints) {
         const previousBalance = user?.points || 0;
-        const pointsChange = hasWon
-          ? Number((entryPrice * usedMultiplier).toFixed(2))
-          : -entryPrice;
+
+        // Apply different point calculation based on who won
+        let pointsChange;
+        let adjustedMultiplier = usedMultiplier;
+
+        if (hasWon) {
+          // Player wins - use normal multiplier
+          pointsChange = Number((entryPrice * usedMultiplier).toFixed(2));
+        } else {
+          // CPU wins - apply 10% fee reduction to payout
+          // Calculate what the reward would have been
+          const potentialReward = Number(
+            (entryPrice * usedMultiplier).toFixed(2)
+          );
+          // Apply 10% fee reduction
+          const fee = Number((potentialReward * 0.1).toFixed(2)); // 10% fee
+          // Calculate final reward after fee
+          const finalReward = potentialReward - fee;
+          // Set the points earned (still get a reward, but reduced by 10%)
+          pointsChange = finalReward;
+
+          adjustedMultiplier = Number((usedMultiplier * 0.9).toFixed(2)); // Show 10% reduced multiplier
+        }
 
         if (hasWon) {
           await gameService.recordGameStats({
             turnsToWin: playerTurns,
-            endingMultiplier: usedMultiplier,
+            endingMultiplier: usedMultiplier, // Record the original multiplier
             difficulty,
             entryPrice,
           });
@@ -155,7 +175,7 @@ const GuessingGame = ({
           previousBalance,
           earned: pointsChange,
           newBalance: response.points,
-          multiplierUsed: usedMultiplier,
+          multiplierUsed: adjustedMultiplier, // Store the adjusted multiplier
         });
 
         setUser((prev) => ({
@@ -189,7 +209,12 @@ const GuessingGame = ({
 
     if (numericGuess === secretNumber) {
       setGameOver(true);
-      handleGameEnd(true, currentMultiplier);
+      // Important: Pass false for hasWon if CPU guessed correctly
+      if (isCpu) {
+        handleGameEnd(false, currentMultiplier);
+      } else {
+        handleGameEnd(true, currentMultiplier);
+      }
       setLoading(false);
       return;
     }
@@ -412,6 +437,17 @@ const GuessingGame = ({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               className="absolute z-[100] top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-red-500 text-6xl font-bold"
+            >
+              {timeLeft}
+            </motion.div>
+          )}
+
+          {/* Larger countdown timer (5-4 seconds) */}
+          {timerActive && !isCpuTurn && timeLeft > 3 && timeLeft <= 5 && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="absolute z-[100] top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-amber-500 text-5xl font-bold"
             >
               {timeLeft}
             </motion.div>
