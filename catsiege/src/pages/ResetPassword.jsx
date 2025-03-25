@@ -89,7 +89,7 @@ export default function ResetPassword() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 flex flex-col md:flex-row">
+    <div className="min-h-screen bg-black flex flex-col md:flex-row">
       {/* Left side - Form */}
       <div className="w-full md:w-1/2 flex flex-col p-4 md:p-10 lg:p-20">
         <div className="mb-8">
@@ -105,10 +105,10 @@ export default function ResetPassword() {
             transition={{ duration: 0.5 }}
             className="mb-6"
           >
-            <h1 className="text-3xl font-bold text-white mb-2">
+            <h1 className="text-3xl font-bold text-[#FFF5E4] mb-2">
               Set New Password
             </h1>
-            <p className="text-gray-400">
+            <p className="text-[#FFF5E4]/60">
               Create a new password for your account
             </p>
           </motion.div>
@@ -117,21 +117,19 @@ export default function ResetPassword() {
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="bg-green-800/30 border border-green-500/50 text-green-200 rounded-lg p-4 mb-6"
+              className="bg-[#FFF5E4]/5 border border-[#FFF5E4]/20 text-[#FFF5E4] rounded-lg p-4 mb-6"
             >
               <h2 className="font-semibold text-lg mb-2">
                 Password reset successful!
               </h2>
-              <p>
+              <p className="text-[#FFF5E4]/70">
                 Your password has been updated. You can now log in with your new
                 password.
               </p>
               <div className="mt-4">
                 <Link
                   to="/login"
-                  className="text-white bg-gray-700 hover:bg-gray-600 rounded-lg px-4 py-2 text-sm font-medium transition-colors flex items-center justify-center w-full sm:w-auto"
-                  aria-label="Go to login page"
-                  tabIndex="0"
+                  className="text-[#FFF5E4] bg-[#FFF5E4]/10 hover:bg-[#FFF5E4]/20 rounded-lg px-4 py-2 text-sm font-medium transition-colors flex items-center justify-center w-full sm:w-auto border border-[#FFF5E4]/20"
                 >
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   Go to Login
@@ -155,7 +153,7 @@ export default function ResetPassword() {
               >
                 <label
                   htmlFor="password"
-                  className="block text-sm font-medium text-gray-300"
+                  className="block text-sm font-medium text-[#FFF5E4]/70"
                 >
                   New Password
                 </label>
@@ -167,14 +165,14 @@ export default function ResetPassword() {
                     required
                     value={formData.password}
                     onChange={handleChange}
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-gray-500"
+                    className="w-full bg-[#FFF5E4]/5 border border-[#FFF5E4]/20 rounded-lg px-4 py-2 text-[#FFF5E4] focus:outline-none focus:ring-2 focus:ring-[#FFF5E4]/30"
                     placeholder="••••••••"
                   />
                   <button
                     type="button"
                     tabIndex="-1"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-[#FFF5E4]/40 hover:text-[#FFF5E4]"
                     aria-label={
                       showPassword ? "Hide password" : "Show password"
                     }
@@ -182,7 +180,7 @@ export default function ResetPassword() {
                     {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
                 </div>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-[#FFF5E4]/40">
                   Must be at least 8 characters
                 </p>
               </motion.div>
@@ -196,7 +194,7 @@ export default function ResetPassword() {
               >
                 <label
                   htmlFor="confirmPassword"
-                  className="block text-sm font-medium text-gray-300"
+                  className="block text-sm font-medium text-[#FFF5E4]/70"
                 >
                   Confirm New Password
                 </label>
@@ -208,14 +206,14 @@ export default function ResetPassword() {
                     required
                     value={formData.confirmPassword}
                     onChange={handleChange}
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-gray-500"
+                    className="w-full bg-[#FFF5E4]/5 border border-[#FFF5E4]/20 rounded-lg px-4 py-2 text-[#FFF5E4] focus:outline-none focus:ring-2 focus:ring-[#FFF5E4]/30"
                     placeholder="••••••••"
                   />
                   <button
                     type="button"
                     tabIndex="-1"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-[#FFF5E4]/40 hover:text-[#FFF5E4]"
                     aria-label={
                       showConfirmPassword ? "Hide password" : "Show password"
                     }
@@ -233,10 +231,9 @@ export default function ResetPassword() {
                 <button
                   type="submit"
                   disabled={loading || !token}
-                  className={`w-full bg-gray-700 hover:bg-gray-600 text-white rounded-lg px-4 py-2 font-medium transition-colors ${
+                  className={`w-full bg-gradient-to-r from-[#FFF5E4]/20 to-[#FFF5E4]/10 hover:from-[#FFF5E4]/30 hover:to-[#FFF5E4]/20 text-[#FFF5E4] rounded-lg px-4 py-2 font-medium transition-colors border border-[#FFF5E4]/20 ${
                     loading || !token ? "opacity-70 cursor-not-allowed" : ""
                   }`}
-                  aria-label="Reset password"
                 >
                   {loading ? "Resetting..." : "Reset Password"}
                 </button>
@@ -245,9 +242,7 @@ export default function ResetPassword() {
               <div className="text-center pt-4">
                 <Link
                   to="/login"
-                  className="text-gray-400 hover:text-gray-300 text-sm flex items-center justify-center"
-                  aria-label="Back to login page"
-                  tabIndex="0"
+                  className="text-[#FFF5E4]/70 hover:text-[#FFF5E4] text-sm flex items-center justify-center"
                 >
                   <ArrowLeft className="w-4 h-4 mr-1" />
                   Back to Login
