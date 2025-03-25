@@ -115,7 +115,7 @@ router.post('/request-reset', async (req, res) => {
     await user.save();
 
     // Send email with reset link
-    const resetUrl = `${process.env.FRONTEND_URL || 'https://catsiege-dev.alanfnl09.com'}/reset-password?token=${resetToken}`;
+    const resetUrl = `https://catsiege.fun/reset-password?token=${resetToken}`;
     
     // Email content
     const mailOptions = {
@@ -123,11 +123,18 @@ router.post('/request-reset', async (req, res) => {
       to: user.email,
       subject: 'Password Reset Request',
       html: `
-        <h1>Password Reset</h1>
-        <p>You requested a password reset. Click the link below to reset your password:</p>
-        <a href="${resetUrl}" style="display: inline-block; padding: 10px 20px; color: white; background-color: #4a76a8; text-decoration: none; border-radius: 5px;">Reset Password</a>
-        <p>This link will expire in 1 hour.</p>
-        <p>If you didn't request this, please ignore this email.</p>
+        <div style="background-color: #000000; padding: 20px; max-width: 600px; margin: 0 auto; border-radius: 10px; font-family: Arial, sans-serif;">
+          <h1 style="color: #FFF5E4; font-family: Arial, sans-serif; margin-bottom: 20px;">Password Reset</h1>
+          <p style="color: #FFF5E4; opacity: 0.8; font-family: Arial, sans-serif;">You requested a password reset. Click the link below to reset your password:</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${resetUrl}" style="display: inline-block; padding: 12px 24px; color: #FFF5E4; background-color: #000000; text-decoration: none; border-radius: 5px; font-family: Arial, sans-serif; border: 1px solid rgba(255,245,228,0.2); box-shadow: 0 0 10px rgba(255,245,228,0.1); font-weight: bold;">Reset Password</a>
+          </div>
+          <p style="color: #FFF5E4; opacity: 0.6; font-family: Arial, sans-serif;">This link will expire in 1 hour.</p>
+          <p style="color: #FFF5E4; opacity: 0.6; font-family: Arial, sans-serif;">If you didn't request this, please ignore this email.</p>
+          <div style="margin-top: 30px; border-top: 1px solid rgba(255,245,228,0.2); padding-top: 15px;">
+            <p style="color: #FFF5E4; opacity: 0.6; font-size: 12px; font-family: Arial, sans-serif; text-align: center;">© CatSiege</p>
+          </div>
+        </div>
       `
     };
 
