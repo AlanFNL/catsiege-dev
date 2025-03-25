@@ -200,20 +200,20 @@ export default function Login() {
           </motion.button>
         </form>
 
-        <motion.p
-          className="mt-6 text-center text-sm"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-        >
-          Don't have an account?{" "}
+        <div className="text-center pt-4 flex flex-col space-y-2">
           <Link
-            to="/register"
-            className="text-[#FFF5E4] underline hover:text-[#FFF5E4]/80 cursor-pointer"
+            to="/forgot-password"
+            className="text-blue-400 hover:text-blue-300 text-sm"
           >
-            Register here
+            Forgot Password?
           </Link>
-        </motion.p>
+          <div className="text-gray-500 text-sm">
+            Don't have an account?{" "}
+            <Link to="/register" className="text-blue-400 hover:text-blue-300">
+              Sign Up
+            </Link>
+          </div>
+        </div>
       </motion.div>
     </motion.div>
   );

@@ -6,12 +6,12 @@ import Whitelist from "./Whitelist";
 import Fourth from "./Fourth";
 import Footer from "./Footer";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
-
 import Guess from "./components/Guess";
 import TournamentWinners from "./components/TournamentWinners";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
-
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Nav from "./Nav";
 import { PointsProvider } from "./contexts/PointsContext";
@@ -71,7 +71,8 @@ function AppContent() {
           />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route
             path="/admin/dashboard"
             element={

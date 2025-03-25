@@ -4,6 +4,8 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../userSchema');
 const { isAuthenticated } = require('../middleware/auth');
+const crypto = require('crypto');
+const nodemailer = require('nodemailer');
 
 const SALT_ROUNDS = 12;
 
@@ -12,6 +14,17 @@ const generateToken = (userId) => {
     expiresIn: '30d'
   });
 };
+
+
+const transporter = nodemailer.createTransport({
+  host: "smtp.hostinger.com",
+  port: 465, // Use 587 for TLS, 465 for SSL
+  secure: true, // true for port 465, false for others
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASSWORD,
+  },
+});
 
 // Public routes (no auth required)
 router.post('/login', async (req, res) => {
@@ -69,6 +82,104 @@ router.post('/login', async (req, res) => {
       error: error.message,
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
+  }
+});
+
+// Password reset request
+router.post('/request-reset', async (req, res) => {
+  try {
+    const { email } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({ message: 'Email is required' });
+    }
+
+    // Find user by email
+    const user = await User.findOne({ email });
+    
+    // Even if user is not found, send a success response for security
+    if (!user) {
+      console.log('Password reset requested for non-existent email:', email);
+      return res.status(200).json({ 
+        message: 'If your email exists in our system, you will receive reset instructions shortly.' 
+      });
+    }
+
+    // Generate reset token
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetTokenExpiry = Date.now() + 3600000; // 1 hour
+
+    // Save token and expiry to user
+    user.resetToken = resetToken;
+    user.resetTokenExpiry = resetTokenExpiry;
+    await user.save();
+
+    // Send email with reset link
+    const resetUrl = `${process.env.FRONTEND_URL || 'https://catsiege-dev.alanfnl09.com'}/reset-password?token=${resetToken}`;
+    
+    // Email content
+    const mailOptions = {
+      from: process.env.EMAIL_FROM || 'passwordreset@catsiege.com',
+      to: user.email,
+      subject: 'Password Reset Request',
+      html: `
+        <h1>Password Reset</h1>
+        <p>You requested a password reset. Click the link below to reset your password:</p>
+        <a href="${resetUrl}" style="display: inline-block; padding: 10px 20px; color: white; background-color: #4a76a8; text-decoration: none; border-radius: 5px;">Reset Password</a>
+        <p>This link will expire in 1 hour.</p>
+        <p>If you didn't request this, please ignore this email.</p>
+      `
+    };
+
+    try {
+      await transporter.sendMail(mailOptions);
+      console.log('Password reset email sent to:', email);
+    } catch (emailError) {
+      console.error('Failed to send reset email:', emailError);
+      // We still send success response even if email fails
+    }
+
+    res.status(200).json({ 
+      message: 'If your email exists in our system, you will receive reset instructions shortly.' 
+    });
+  } catch (error) {
+    console.error('Password reset request error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Reset password with token
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+    
+    if (!token || !newPassword) {
+      return res.status(400).json({ message: 'Token and new password are required' });
+    }
+
+    // Find user with valid token
+    const user = await User.findOne({ 
+      resetToken: token,
+      resetTokenExpiry: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid or expired reset token' });
+    }
+
+    // Hash new password
+    user.password = newPassword; // Schema pre-save hook will hash it
+    
+    // Clear reset token fields
+    user.resetToken = undefined;
+    user.resetTokenExpiry = undefined;
+    
+    await user.save();
+    
+    res.status(200).json({ message: 'Password has been reset successfully' });
+  } catch (error) {
+    console.error('Password reset error:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 

@@ -44,6 +44,29 @@ export const authService = {
     }
   },
 
+  async requestPasswordReset(email) {
+    try {
+      const response = await api.post('/auth/request-reset', { email });
+      return response.data;
+    } catch (error) {
+      console.error('Password reset request error:', error.response || error);
+      throw error.response?.data || { message: 'Network error' };
+    }
+  },
+
+  async resetPassword(token, newPassword) {
+    try {
+      const response = await api.post('/auth/reset-password', {
+        token,
+        newPassword
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Password reset error:', error.response || error);
+      throw error.response?.data || { message: 'Network error' };
+    }
+  },
+
   async me() {
     try {
       const token = localStorage.getItem('tokenCat');
