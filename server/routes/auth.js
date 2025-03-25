@@ -125,7 +125,7 @@ router.post('/request-reset', async (req, res) => {
       text: `You requested a password reset for your CatSiege account. Click this link to reset your password: ${resetUrl} (valid for 1 hour)`,
       html: `
         <div style="background-color: #000000; padding: 20px; max-width: 600px; margin: 0 auto; border-radius: 10px; font-family: Arial, sans-serif;">
-          <img src="https://catsiege.fun/logo.png" alt="CatSiege" style="max-width: 150px; margin-bottom: 20px;" />
+
           <h1 style="color: #FFF5E4; font-family: Arial, sans-serif; margin-bottom: 20px;">Password Reset</h1>
           <p style="color: #FFF5E4; opacity: 0.8; font-family: Arial, sans-serif;">You requested a password reset for your CatSiege account. Click the button below to reset your password:</p>
           <div style="text-align: center; margin: 30px 0;">
