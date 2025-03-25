@@ -129,7 +129,9 @@ export default function ResetPassword() {
               <div className="mt-4">
                 <Link
                   to="/login"
-                  className="text-white bg-green-600 hover:bg-green-700 rounded-lg px-4 py-2 text-sm font-medium transition-colors flex items-center justify-center w-full sm:w-auto"
+                  className="text-white bg-gray-700 hover:bg-gray-600 rounded-lg px-4 py-2 text-sm font-medium transition-colors flex items-center justify-center w-full sm:w-auto"
+                  aria-label="Go to login page"
+                  tabIndex="0"
                 >
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   Go to Login
@@ -165,7 +167,7 @@ export default function ResetPassword() {
                     required
                     value={formData.password}
                     onChange={handleChange}
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-gray-500"
                     placeholder="••••••••"
                   />
                   <button
@@ -206,7 +208,7 @@ export default function ResetPassword() {
                     required
                     value={formData.confirmPassword}
                     onChange={handleChange}
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-gray-500"
                     placeholder="••••••••"
                   />
                   <button
@@ -231,9 +233,10 @@ export default function ResetPassword() {
                 <button
                   type="submit"
                   disabled={loading || !token}
-                  className={`w-full bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 py-2 font-medium transition-colors ${
+                  className={`w-full bg-gray-700 hover:bg-gray-600 text-white rounded-lg px-4 py-2 font-medium transition-colors ${
                     loading || !token ? "opacity-70 cursor-not-allowed" : ""
                   }`}
+                  aria-label="Reset password"
                 >
                   {loading ? "Resetting..." : "Reset Password"}
                 </button>
@@ -242,7 +245,9 @@ export default function ResetPassword() {
               <div className="text-center pt-4">
                 <Link
                   to="/login"
-                  className="text-blue-400 hover:text-blue-300 text-sm flex items-center justify-center"
+                  className="text-gray-400 hover:text-gray-300 text-sm flex items-center justify-center"
+                  aria-label="Back to login page"
+                  tabIndex="0"
                 >
                   <ArrowLeft className="w-4 h-4 mr-1" />
                   Back to Login

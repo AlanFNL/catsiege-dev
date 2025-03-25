@@ -119,7 +119,7 @@ router.post('/request-reset', async (req, res) => {
     
     // Email content
     const mailOptions = {
-      from: process.env.EMAIL_FROM || 'passwordreset@catsiege.com',
+      from: process.env.EMAIL_USER,
       to: user.email,
       subject: 'Password Reset Request',
       html: `

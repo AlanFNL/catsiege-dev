@@ -85,7 +85,9 @@ export default function ForgotPassword() {
               <div className="mt-4">
                 <Link
                   to="/login"
-                  className="text-white bg-green-600 hover:bg-green-700 rounded-lg px-4 py-2 text-sm font-medium transition-colors flex items-center justify-center w-full sm:w-auto"
+                  className="text-white bg-gray-700 hover:bg-gray-600 rounded-lg px-4 py-2 text-sm font-medium transition-colors flex items-center justify-center w-full sm:w-auto"
+                  aria-label="Return to login page"
+                  tabIndex="0"
                 >
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   Return to Login
@@ -119,7 +121,7 @@ export default function ForgotPassword() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-gray-500"
                   placeholder="your.email@example.com"
                 />
               </motion.div>
@@ -128,9 +130,10 @@ export default function ForgotPassword() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className={`w-full bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 py-2 font-medium transition-colors ${
+                  className={`w-full bg-gray-700 hover:bg-gray-600 text-white rounded-lg px-4 py-2 font-medium transition-colors ${
                     loading ? "opacity-70 cursor-not-allowed" : ""
                   }`}
+                  aria-label="Send reset instructions"
                 >
                   {loading ? "Sending..." : "Send Reset Instructions"}
                 </button>
@@ -139,7 +142,9 @@ export default function ForgotPassword() {
               <div className="text-center pt-4">
                 <Link
                   to="/login"
-                  className="text-blue-400 hover:text-blue-300 text-sm flex items-center justify-center"
+                  className="text-gray-400 hover:text-gray-300 text-sm flex items-center justify-center"
+                  aria-label="Back to login page"
+                  tabIndex="0"
                 >
                   <ArrowLeft className="w-4 h-4 mr-1" />
                   Back to Login
