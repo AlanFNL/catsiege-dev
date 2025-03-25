@@ -117,25 +117,33 @@ router.post('/request-reset', async (req, res) => {
     // Send email with reset link
     const resetUrl = `https://catsiege.fun/reset-password?token=${resetToken}`;
     
-    // Email content
+    // Email content with improved deliverability
     const mailOptions = {
-      from: process.env.EMAIL_USER,
+      from: `"CatSiege Team" <${process.env.EMAIL_USER}>`,
       to: user.email,
-      subject: 'Password Reset Request',
+      subject: 'CatSiege Password Reset',
+      text: `You requested a password reset for your CatSiege account. Click this link to reset your password: ${resetUrl} (valid for 1 hour)`,
       html: `
         <div style="background-color: #000000; padding: 20px; max-width: 600px; margin: 0 auto; border-radius: 10px; font-family: Arial, sans-serif;">
+          <img src="https://catsiege.fun/logo.png" alt="CatSiege" style="max-width: 150px; margin-bottom: 20px;" />
           <h1 style="color: #FFF5E4; font-family: Arial, sans-serif; margin-bottom: 20px;">Password Reset</h1>
-          <p style="color: #FFF5E4; opacity: 0.8; font-family: Arial, sans-serif;">You requested a password reset. Click the link below to reset your password:</p>
+          <p style="color: #FFF5E4; opacity: 0.8; font-family: Arial, sans-serif;">You requested a password reset for your CatSiege account. Click the button below to reset your password:</p>
           <div style="text-align: center; margin: 30px 0;">
             <a href="${resetUrl}" style="display: inline-block; padding: 12px 24px; color: #FFF5E4; background-color: #000000; text-decoration: none; border-radius: 5px; font-family: Arial, sans-serif; border: 1px solid rgba(255,245,228,0.2); box-shadow: 0 0 10px rgba(255,245,228,0.1); font-weight: bold;">Reset Password</a>
           </div>
-          <p style="color: #FFF5E4; opacity: 0.6; font-family: Arial, sans-serif;">This link will expire in 1 hour.</p>
-          <p style="color: #FFF5E4; opacity: 0.6; font-family: Arial, sans-serif;">If you didn't request this, please ignore this email.</p>
+          <p style="color: #FFF5E4; opacity: 0.6; font-family: Arial, sans-serif;">This link will expire in 1 hour. If you cannot click the button, copy and paste this URL into your browser:</p>
+          <p style="color: #FFF5E4; word-break: break-all; font-size: 12px; margin: 15px 0; padding: 10px; background-color: rgba(255,245,228,0.05); border-radius: 5px;">${resetUrl}</p>
+          <p style="color: #FFF5E4; opacity: 0.6; font-family: Arial, sans-serif;">If you didn't request this, please ignore this email or contact us if you have concerns.</p>
           <div style="margin-top: 30px; border-top: 1px solid rgba(255,245,228,0.2); padding-top: 15px;">
-            <p style="color: #FFF5E4; opacity: 0.6; font-size: 12px; font-family: Arial, sans-serif; text-align: center;">© CatSiege</p>
+            <p style="color: #FFF5E4; opacity: 0.6; font-size: 12px; font-family: Arial, sans-serif; text-align: center;">© CatSiege - <a href="mailto:team@catsiege.com" style="color: #FFF5E4; text-decoration: underline;">team@catsiege.com</a></p>
           </div>
         </div>
-      `
+      `,
+      headers: {
+        'X-Priority': '1',
+        'X-MSMail-Priority': 'High',
+        'Importance': 'High'
+      }
     };
 
     try {
