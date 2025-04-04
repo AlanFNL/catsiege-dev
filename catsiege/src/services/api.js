@@ -281,19 +281,29 @@ export const gameService = {
       const response = await api.post('/game/autobattle/start');
       return response.data;
     } catch (error) {
-      console.error('Failed to start AutoBattle game:', error);
-      throw error.response?.data || { message: 'Network error' };
+      console.error('Error starting AutoBattle game', error);
+      throw error;
     }
   },
   
   // Complete an AutoBattle game and process rewards
-  completeAutoBattle: async (winner) => {
+  async completeAutoBattle(battleResult) {
     try {
-      const response = await api.post('/game/autobattle/complete', { winner });
+      console.log('Starting API call to complete auto battle', battleResult);
+      
+      // Configure headers with authorization token
+      const token = localStorage.getItem('tokenCat');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+      
+      const response = await api.post('/games/auto-battle/complete', battleResult);
+      console.log('Complete auto battle API response:', response.data);
+      
       return response.data;
     } catch (error) {
-      console.error('Failed to complete AutoBattle game:', error);
-      throw error.response?.data || { message: 'Network error' };
+      console.error('Complete auto battle error:', error.response || error);
+      throw error.response?.data || { message: 'Network error', success: false };
     }
   }
 };
