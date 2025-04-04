@@ -252,9 +252,9 @@ export const gameService = {
   },
 
   // Submit a guess
-  submitGuess: async (data) => {
+  submitGuess: async (guess) => {
     try {
-      const response = await api.post('/game/guess', data);
+      const response = await api.post('/game/guess', { guess });
       return response.data;
     } catch (error) {
       console.error('Failed to submit guess:', error);
@@ -262,7 +262,7 @@ export const gameService = {
     }
   },
 
-  // End game session
+  // End game session (forfeit or timeout)
   endGameSession: async () => {
     try {
       const response = await api.post('/game/session/end');
@@ -272,6 +272,30 @@ export const gameService = {
       throw error.response?.data || { message: 'Network error' };
     }
   },
+
+  // === AutoBattle Game Services ===
+  
+  // Start an AutoBattle game - pay entry fee and collect platform fee
+  startAutoBattle: async () => {
+    try {
+      const response = await api.post('/game/autobattle/start');
+      return response.data;
+    } catch (error) {
+      console.error('Failed to start AutoBattle game:', error);
+      throw error.response?.data || { message: 'Network error' };
+    }
+  },
+  
+  // Complete an AutoBattle game and process rewards
+  completeAutoBattle: async (winner) => {
+    try {
+      const response = await api.post('/game/autobattle/complete', { winner });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to complete AutoBattle game:', error);
+      throw error.response?.data || { message: 'Network error' };
+    }
+  }
 };
 
 // Add request interceptor to include token in all requests

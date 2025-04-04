@@ -27,6 +27,11 @@ const userSchema = new mongoose.Schema({
     type: Number,
     default: 0,
   },
+  bankroll: {
+    type: Number,
+    default: 0,
+    description: "Platform fees collected from games, only used by admin accounts"
+  },
   lastLogin: {
     type: Date,
     default: null,

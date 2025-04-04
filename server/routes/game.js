@@ -17,6 +17,12 @@ const TURN_MULTIPLIERS = {
 
 const ENTRY_PRICE = 5;
 
+// === AutoBattle Game Constants ===
+const AUTO_BATTLE_ENTRY_PRICE = 50;
+const AUTO_BATTLE_WIN_MULTIPLIER = 1.9;
+const AUTO_BATTLE_LOSS_MULTIPLIER = 0.5;
+const PLATFORM_FEE_PERCENT = 5; // 5% fee
+
 // Get current game session
 router.get('/session', isAuthenticated, async (req, res) => {
   try {
@@ -169,6 +175,112 @@ router.post('/session/end', isAuthenticated, async (req, res) => {
   } catch (error) {
     console.error('Error ending game session:', error);
     res.status(500).json({ message: 'Failed to end game session' });
+  }
+});
+
+// === AutoBattle Game Endpoints ===
+
+// Start an AutoBattle game session
+router.post('/autobattle/start', isAuthenticated, async (req, res) => {
+  try {
+    // Check if user has enough points
+    const user = await User.findById(req.userId);
+    if (user.points < AUTO_BATTLE_ENTRY_PRICE) {
+      return res.status(400).json({ 
+        message: 'Insufficient points',
+        userPoints: user.points
+      });
+    }
+
+    // Calculate fee and entry
+    const platformFeeAmount = AUTO_BATTLE_ENTRY_PRICE * (PLATFORM_FEE_PERCENT / 100);
+    const actualEntryAmount = AUTO_BATTLE_ENTRY_PRICE - platformFeeAmount;
+
+    // Deduct entry cost from user
+    user.points -= AUTO_BATTLE_ENTRY_PRICE;
+    await user.save();
+
+    // Add the platform fee to the bankroll
+    // Assuming we have a Bankroll model or we're updating a field in an existing model
+    // This is simplified - you would need to implement the actual bankroll update
+    try {
+      // Find the admin user or system account to add bankroll
+      const adminUser = await User.findOne({ isAdmin: true });
+      if (adminUser) {
+        adminUser.bankroll = (adminUser.bankroll || 0) + platformFeeAmount;
+        await adminUser.save();
+      }
+    } catch (bankrollError) {
+      console.error('Warning: Could not update bankroll:', bankrollError);
+      // Continue with the game even if bankroll update fails
+    }
+
+    // Return success response with user's updated balance
+    res.json({
+      message: 'AutoBattle game started successfully',
+      entryPaid: AUTO_BATTLE_ENTRY_PRICE,
+      platformFee: platformFeeAmount,
+      userPoints: user.points,
+      previousPoints: user.points + AUTO_BATTLE_ENTRY_PRICE
+    });
+
+  } catch (error) {
+    console.error('Error starting AutoBattle game:', error);
+    res.status(500).json({ message: 'Failed to start AutoBattle game' });
+  }
+});
+
+// Complete an AutoBattle game and process rewards
+router.post('/autobattle/complete', isAuthenticated, async (req, res) => {
+  try {
+    const { winner } = req.body;
+    
+    if (typeof winner !== 'string' || !['player', 'enemy', 'draw'].includes(winner)) {
+      return res.status(400).json({ message: 'Invalid winner value provided' });
+    }
+
+    const user = await User.findById(req.userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    let pointsChange = 0;
+    let message = '';
+
+    if (winner === 'player') {
+      // Player wins - gets 1.9x their entry
+      pointsChange = AUTO_BATTLE_ENTRY_PRICE * AUTO_BATTLE_WIN_MULTIPLIER;
+      message = 'Victory! You earned points!';
+    } else if (winner === 'enemy') {
+      // Player loses - already paid entry fee, no additional change
+      pointsChange = 0; // Entry fee was already deducted when starting
+      message = 'Defeat! Better luck next time.';
+    } else {
+      // Draw - player gets back 50% of entry
+      pointsChange = AUTO_BATTLE_ENTRY_PRICE * AUTO_BATTLE_LOSS_MULTIPLIER;
+      message = 'Draw! You recovered some points.';
+    }
+
+    // Add any winnings to user's balance
+    if (pointsChange > 0) {
+      user.points += pointsChange;
+      await user.save();
+    }
+
+    // Return the results
+    res.json({
+      message,
+      winner,
+      pointsChange,
+      entryPaid: AUTO_BATTLE_ENTRY_PRICE,
+      netResult: pointsChange - AUTO_BATTLE_ENTRY_PRICE, // Net profit/loss
+      currentPoints: user.points,
+      previousPoints: user.points - pointsChange // Points before this win
+    });
+
+  } catch (error) {
+    console.error('Error completing AutoBattle game:', error);
+    res.status(500).json({ message: 'Failed to complete AutoBattle game' });
   }
 });
 
