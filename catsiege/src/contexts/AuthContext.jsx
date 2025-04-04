@@ -42,6 +42,50 @@ export function AuthProvider({ children }) {
     }
   }, [isCheckingAuth]);
 
+  // Add refreshUser function for updating user data (used by games)
+  const refreshUser = useCallback(async () => {
+    try {
+      const token = localStorage.getItem("tokenCat");
+      if (!token) return;
+
+      const userData = await authService.me();
+      console.log("Refreshed user data:", userData);
+
+      if (userData) {
+        setUser(userData);
+        return userData;
+      }
+    } catch (error) {
+      console.error("Failed to refresh user data:", error);
+    }
+  }, []);
+
+  // Add updateUserPoints function that handles both API call and state update
+  const updateUserPoints = useCallback(async (pointsChange) => {
+    try {
+      const response = await authService.updatePoints(pointsChange);
+
+      // If successful, update the user state directly with the new points
+      if (response && response.points !== undefined) {
+        setUser((prevUser) => ({
+          ...prevUser,
+          points: response.points,
+        }));
+
+        console.log(
+          `Points updated: ${
+            pointsChange > 0 ? "+" : ""
+          }${pointsChange}. New balance: ${response.points}`
+        );
+        return response;
+      }
+      return null;
+    } catch (error) {
+      console.error("Failed to update user points:", error);
+      throw error;
+    }
+  }, []);
+
   useEffect(() => {
     const token = localStorage.getItem("tokenCat");
     if (token) {
@@ -74,6 +118,8 @@ export function AuthProvider({ children }) {
     login,
     logout,
     checkAuth,
+    refreshUser,
+    updateUserPoints, // Add the new function to context
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

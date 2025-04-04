@@ -236,12 +236,12 @@ router.post('/autobattle/complete', isAuthenticated, async (req, res) => {
     const { winner } = req.body;
     
     if (typeof winner !== 'string' || !['player', 'enemy', 'draw'].includes(winner)) {
-      return res.status(400).json({ message: 'Invalid winner value provided', success: false });
+      return res.status(400).json({ message: 'Invalid winner value provided' });
     }
 
     const user = await User.findById(req.userId);
     if (!user) {
-      return res.status(404).json({ message: 'User not found', success: false });
+      return res.status(404).json({ message: 'User not found' });
     }
 
     let pointsChange = 0;
@@ -267,22 +267,20 @@ router.post('/autobattle/complete', isAuthenticated, async (req, res) => {
       await user.save();
     }
 
-    // Return the results with success flag and timestamp
+    // Return the results
     res.json({
-      success: true,
       message,
       winner,
       pointsChange,
       entryPaid: AUTO_BATTLE_ENTRY_PRICE,
       netResult: pointsChange - AUTO_BATTLE_ENTRY_PRICE, // Net profit/loss
       currentPoints: user.points,
-      previousPoints: user.points - pointsChange, // Points before this win
-      timestamp: new Date().toISOString()
+      previousPoints: user.points - pointsChange // Points before this win
     });
 
   } catch (error) {
     console.error('Error completing AutoBattle game:', error);
-    res.status(500).json({ message: 'Failed to complete AutoBattle game', success: false });
+    res.status(500).json({ message: 'Failed to complete AutoBattle game' });
   }
 });
 

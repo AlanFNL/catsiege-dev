@@ -15,3 +15,62 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* 3D Card Flip Styles */
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.backface-hidden {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform-style: preserve-3d;
+}
+
+/* Rarity effects */
+.legendary-glow {
+  animation: legendaryGlow 3s infinite alternate;
+}
+
+.epic-glow {
+  animation: epicGlow 4s infinite alternate;
+}
+
+@keyframes legendaryGlow {
+  0% {
+    box-shadow: 0 0 10px 2px rgba(245, 158, 11, 0.3);
+  }
+  100% {
+    box-shadow: 0 0 20px 5px rgba(245, 158, 11, 0.5);
+  }
+}
+
+@keyframes epicGlow {
+  0% {
+    box-shadow: 0 0 5px 1px rgba(147, 51, 234, 0.2);
+  }
+  100% {
+    box-shadow: 0 0 15px 3px rgba(147, 51, 234, 0.4);
+  }
+}
+
+/* Confetti animation for legendary items */
+.confetti {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background-color: #f59e0b;
+  border-radius: 50%;
+  animation: confetti 1s ease-in-out forwards;
+}
+
+@keyframes confetti {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-100px) rotate(720deg);
+    opacity: 0;
+  }
+}
+

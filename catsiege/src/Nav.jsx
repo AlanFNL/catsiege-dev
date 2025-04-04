@@ -10,6 +10,7 @@ import {
   BarChart3,
   BadgeHelp,
   Info,
+  Gamepad2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-scroll";
@@ -288,6 +289,7 @@ const InfoModal = ({ isOpen, onClose }) => {
 export default function Nav() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isGamesDropdownOpen, setIsGamesDropdownOpen] = useState(false);
   const [isRewardsOpen, setIsRewardsOpen] = useState(false);
   const [isWalletOpen, setIsWalletOpen] = useState(false);
   const [isDiscordOpen, setIsDiscordOpen] = useState(false);
@@ -295,6 +297,7 @@ export default function Nav() {
   const { user, logout, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const gamesDropdownRef = useRef(null);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -302,11 +305,14 @@ export default function Nav() {
       if (isDropdownOpen && !event.target.closest(".user-dropdown")) {
         setIsDropdownOpen(false);
       }
+      if (isGamesDropdownOpen && !event.target.closest(".games-dropdown")) {
+        setIsGamesDropdownOpen(false);
+      }
     };
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isDropdownOpen]);
+  }, [isDropdownOpen, isGamesDropdownOpen]);
 
   const handleLogout = async () => {
     try {
@@ -365,21 +371,50 @@ export default function Nav() {
               </motion.div>
             ))}
 
-            {/* Add link to guess game */}
+            {/* Games Dropdown Menu */}
             <motion.div
               variants={navItemVariants}
               initial="hidden"
               animate="visible"
               custom={navItems.length}
+              className="games-dropdown relative"
+              ref={gamesDropdownRef}
             >
-              <Link
-                to="guessgame"
-                smooth={true}
-                duration={500}
-                className="text-sm lg:text-base hover:text-gray-300 cursor-pointer"
+              <button
+                onClick={() => setIsGamesDropdownOpen(!isGamesDropdownOpen)}
+                className="flex items-center text-sm lg:text-base hover:text-gray-300 cursor-pointer gap-1"
               >
-                GUESS GAME
-              </Link>
+                <Gamepad2 size={18} className="mr-1" />
+                GAMES
+                <ChevronDown size={16} />
+              </button>
+
+              <AnimatePresence>
+                {isGamesDropdownOpen && (
+                  <motion.div
+                    className="absolute left-0 mt-2 w-48 bg-black border border-[#FFF5E4] rounded-lg shadow-lg py-1 z-50"
+                    variants={dropdownVariants}
+                    initial="hidden"
+                    animate="visible"
+                    exit="exit"
+                  >
+                    <RouterLink
+                      to="/games/guess"
+                      onClick={() => setIsGamesDropdownOpen(false)}
+                      className="flex items-center space-x-2 w-full px-4 py-2 text-sm hover:bg-[#FFF5E4]/10"
+                    >
+                      <span>Guess the Number</span>
+                    </RouterLink>
+                    <RouterLink
+                      to="/games/battle"
+                      onClick={() => setIsGamesDropdownOpen(false)}
+                      className="flex items-center space-x-2 w-full px-4 py-2 text-sm hover:bg-[#FFF5E4]/10"
+                    >
+                      <span>Sit & Go Battle</span>
+                    </RouterLink>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </motion.div>
 
             {/* Social Media Icons */}
@@ -589,6 +624,55 @@ export default function Nav() {
                   </RouterLink>
                 )
               )}
+
+              {/* Mobile Games Menu */}
+              <div className="py-2">
+                <button
+                  onClick={() => setIsGamesDropdownOpen(!isGamesDropdownOpen)}
+                  className="flex items-center text-sm hover:text-gray-300 gap-2 w-full"
+                >
+                  <Gamepad2 size={18} />
+                  GAMES
+                  <ChevronDown
+                    size={16}
+                    className={
+                      isGamesDropdownOpen ? "transform rotate-180" : ""
+                    }
+                  />
+                </button>
+
+                <AnimatePresence>
+                  {isGamesDropdownOpen && (
+                    <motion.div
+                      className="pl-6 mt-2 flex flex-col space-y-2"
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                    >
+                      <RouterLink
+                        to="/games/guess"
+                        className="block py-1 text-sm hover:text-gray-300"
+                        onClick={() => {
+                          setIsGamesDropdownOpen(false);
+                          setIsMenuOpen(false);
+                        }}
+                      >
+                        Guess the Number
+                      </RouterLink>
+                      <RouterLink
+                        to="/games/battle"
+                        className="block py-1 text-sm hover:text-gray-300"
+                        onClick={() => {
+                          setIsGamesDropdownOpen(false);
+                          setIsMenuOpen(false);
+                        }}
+                      >
+                        Sit & Go Battle
+                      </RouterLink>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
 
               {loading ? (
                 <div className="py-2">

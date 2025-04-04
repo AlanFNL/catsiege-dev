@@ -19,6 +19,8 @@ import { WalletContextProvider } from "./contexts/WalletContext";
 import WelcomeGuide from "./components/WelcomeGuide";
 import { ProtectedAdminRoute } from "./components/ProtectedAdminRoute";
 import AdminDashboard from "./components/AdminDashboard";
+import AutoBattleGame from "./components/AutoBattle/AutoBattleGame";
+import GamesLayout from "./layouts/GamesLayout";
 
 // Create a wrapper component to access AuthContext
 function AppContent() {
@@ -54,14 +56,12 @@ function AppContent() {
               <div className="overflow-x-hidden">
                 <Nav />
                 <Hero />
-                <Guess />
                 <div id="tournament">
                   <TournamentWinners />
                 </div>
                 <div id="roadmap">
                   <Whitelist />
                 </div>
-
                 <Fourth />
                 <div id="contact">
                   <Footer />
@@ -69,6 +69,13 @@ function AppContent() {
               </div>
             }
           />
+
+          {/* Game Routes */}
+          <Route path="/games" element={<GamesLayout />}>
+            <Route path="guess" element={<Guess />} />
+            <Route path="battle" element={<AutoBattleGame />} />
+          </Route>
+
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />

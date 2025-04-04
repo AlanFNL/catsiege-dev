@@ -96,10 +96,7 @@ function Guess() {
   }, []);
 
   return (
-    <section
-      id="guessgame"
-      className="relative w-screen h-fit py-12 md:py-48 bg-[url('./assets/guess-game-bgg.webp')] bg-no-repeat bg-center bg-cover flex justify-center items-center"
-    >
+    <div className="relative w-full h-fit py-12 md:py-24 bg-[url('./assets/guess-game-bgg.webp')] bg-no-repeat bg-center bg-cover flex justify-center items-center">
       <AnimatePresence mode="wait">
         {activeTab === "" && (
           <motion.div
@@ -473,7 +470,7 @@ function Guess() {
           </motion.div>
         </div>
       )}
-    </section>
+    </div>
   );
 }
 

@@ -287,23 +287,14 @@ export const gameService = {
   },
   
   // Complete an AutoBattle game and process rewards
-  async completeAutoBattle(battleResult) {
+  completeAutoBattle: async (data) => {
     try {
-      console.log('Starting API call to complete auto battle', battleResult);
-      
-      // Configure headers with authorization token
-      const token = localStorage.getItem('tokenCat');
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-      
-      const response = await api.post('/games/auto-battle/complete', battleResult);
-      console.log('Complete auto battle API response:', response.data);
-      
+      console.log('Completing AutoBattle with data:', data);
+      const response = await api.post('/game/autobattle/complete', data);
       return response.data;
     } catch (error) {
-      console.error('Complete auto battle error:', error.response || error);
-      throw error.response?.data || { message: 'Network error', success: false };
+      console.error('Error completing AutoBattle game', error);
+      throw error;
     }
   }
 };
