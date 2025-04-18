@@ -151,7 +151,6 @@ router.post('/user/quests/claim', isAuthenticated, async (req, res) => {
 router.post('/claim', isAuthenticated, async (req, res) => {
   try {
     const { questId } = req.body;
-    console.log('Claiming quest:', { userId: req.userId, questId });
 
     const user = await User.findById(req.userId);
     if (!user) {
@@ -168,7 +167,6 @@ router.post('/claim', isAuthenticated, async (req, res) => {
     // since we're using localStorage verification on the frontend
     if (questId === 'NFT_HOLDER') {
       // Just proceed with the claim since verification was done on frontend
-      console.log('NFT holder quest claim - verification done via localStorage');
     }
 
     // Add quest to completed quests
@@ -193,7 +191,6 @@ router.post('/claim', isAuthenticated, async (req, res) => {
       pointsEarned: questPoints
     };
 
-    console.log('Quest claim response data:', responseData);
     res.json(responseData);
   } catch (error) {
     console.error('Error claiming quest:', error);

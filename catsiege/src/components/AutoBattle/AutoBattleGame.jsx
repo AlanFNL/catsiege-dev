@@ -99,7 +99,6 @@ const AutoBattleGame = () => {
     }
 
     // Could navigate to battle history page or show a modal
-    console.log("View battle history:", battleHistory);
   };
 
   const generateEnemyLoadout = () => {

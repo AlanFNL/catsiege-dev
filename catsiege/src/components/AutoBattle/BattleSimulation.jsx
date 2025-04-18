@@ -253,7 +253,6 @@ const BattleSimulation = ({
         const healthMatch = logEntry.match(/Player health: (\d+)/);
         if (healthMatch && healthMatch[1]) {
           const healthValue = parseInt(healthMatch[1], 10);
-          console.log("Updating player health to:", healthValue);
 
           // Show damage effect if health decreased
           if (healthValue < playerHealth) {
@@ -278,7 +277,6 @@ const BattleSimulation = ({
         const healthMatch = logEntry.match(/Enemy health: (\d+)/);
         if (healthMatch && healthMatch[1]) {
           const healthValue = parseInt(healthMatch[1], 10);
-          console.log("Updating enemy health to:", healthValue);
 
           // Show damage effect if health decreased
           if (healthValue < enemyHealth) {

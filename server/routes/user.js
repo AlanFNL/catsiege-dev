@@ -7,14 +7,12 @@ const router = express.Router();
 // Get user details including NFT verification status
 router.get('/me', isAuthenticated, async (req, res) => {
   try {
-    console.log('Fetching complete user data for ID:', req.userId);
     
     const user = await User.findById(req.userId)
       .select('-password')
       .lean();
     
     if (!user) {
-      console.log('No user found');
       return res.status(404).json({ message: 'User not found' });
     }
 
@@ -32,7 +30,6 @@ router.get('/me', isAuthenticated, async (req, res) => {
       completedQuests: user.completedQuests || []
     };
     
-    console.log('Mapped user data for frontend:', mappedUserData);
     res.json(mappedUserData);
   } catch (error) {
     console.error('Error fetching user data:', error);
@@ -70,7 +67,6 @@ router.get('/nfts', isAuthenticated, async (req, res) => {
 router.post('/quests/nft-holder', isAuthenticated, async (req, res) => {
   try {
     const { verified, walletAddress } = req.body;
-    console.log('Updating NFT holder status:', { userId: req.userId, verified, walletAddress });
     
     const user = await User.findByIdAndUpdate(
       req.userId,
@@ -83,7 +79,6 @@ router.post('/quests/nft-holder', isAuthenticated, async (req, res) => {
       { new: true }
     ).select('-password');
     
-    console.log('Updated user:', user);
     res.json(user);
   } catch (error) {
     console.error('Error updating NFT holder quest:', error);
@@ -94,14 +89,12 @@ router.post('/quests/nft-holder', isAuthenticated, async (req, res) => {
 // Add this new route to check NFT verification status
 router.get('/nft-status', isAuthenticated, async (req, res) => {
   try {
-    console.log('Checking NFT status for user:', req.userId);
     
     const user = await User.findById(req.userId)
       .select('quests.nftVerified walletAddress')
       .lean();
     
     if (!user) {
-      console.log('No user found');
       return res.status(404).json({ message: 'User not found' });
     }
 
@@ -111,7 +104,6 @@ router.get('/nft-status', isAuthenticated, async (req, res) => {
       walletAddress: user.walletAddress || null
     };
 
-    console.log('NFT status:', nftStatus);
     res.json(nftStatus);
   } catch (error) {
     console.error('Error checking NFT status:', error);

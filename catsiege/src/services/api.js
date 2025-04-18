@@ -289,7 +289,6 @@ export const gameService = {
   // Complete an AutoBattle game and process rewards
   completeAutoBattle: async (data) => {
     try {
-      console.log('Completing AutoBattle with data:', data);
       const response = await api.post('/game/autobattle/complete', data);
       return response.data;
     } catch (error) {

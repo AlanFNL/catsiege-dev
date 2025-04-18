@@ -49,7 +49,6 @@ export function AuthProvider({ children }) {
       if (!token) return;
 
       const userData = await authService.me();
-      console.log("Refreshed user data:", userData);
 
       if (userData) {
         setUser(userData);
@@ -72,11 +71,6 @@ export function AuthProvider({ children }) {
           points: response.points,
         }));
 
-        console.log(
-          `Points updated: ${
-            pointsChange > 0 ? "+" : ""
-          }${pointsChange}. New balance: ${response.points}`
-        );
         return response;
       }
       return null;

@@ -46,12 +46,10 @@ const BattleResults = ({
       if (isSubmitting) return;
 
       setIsSubmitting(true);
-      console.log("Starting battle submission process");
 
       try {
         // Set reward amount for display
         setRewardAmount(winnings);
-        console.log("Reward amount set to:", winnings);
 
         // Create a result object to pass to the API
         const battleResult = {
@@ -70,20 +68,13 @@ const BattleResults = ({
           reward: winnings,
         };
 
-        console.log("Submitting battle result to API:", battleResult);
-
         // Call API to complete battle and process rewards
         const response = await gameService.completeAutoBattle(battleResult);
-        console.log("API response:", response);
 
         if (response && response.success) {
           // The server has already updated the points in the database
           // Just update the user state with the new points from the response
           if (response.currentPoints !== undefined) {
-            console.log(
-              "Updating user points UI with currentPoints from server:",
-              response.currentPoints
-            );
             setUser((prevUser) => ({
               ...prevUser,
               points: response.currentPoints,
@@ -96,7 +87,6 @@ const BattleResults = ({
             // Short delay before showing reward animation
             setTimeout(() => {
               setShowReward(true);
-              console.log("Showing reward animation");
             }, 1000);
           }
         } else {
@@ -167,7 +157,6 @@ const BattleResults = ({
   };
 
   const handlePlayAgain = () => {
-    console.log("Play again clicked");
     onPlayAgain();
   };
 
