@@ -81,6 +81,19 @@ export default function Footer() {
         <div className="text-center mt-8 text-sm">
           © 2025 ALL RIGHTS RESERVED
         </div>
+
+        {/* Developer Credit */}
+        <div className="text-center mt-4 text-xs text-white/60">
+          Developed by{" "}
+          <a
+            href="https://cavia.agency"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-white transition-colors underline"
+          >
+            Cavia Agency
+          </a>
+        </div>
       </div>
     </footer>
   );
